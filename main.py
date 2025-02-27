@@ -90,9 +90,9 @@ if not os.path.exists(csv_file) and write_tx_to_csv:
 
 # Append data to the CSV file
 def log_to_csv(data):
-    with open(csv_file, mode="a", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow(data)
+    with open(csv_file, mode="a", newline="") as f:
+        csv_writer = csv.writer(f)
+        csv_writer.writerow(data)
 
 
 # Define the structure of the telemetry data
