@@ -14,12 +14,16 @@ AC_SHARED_MEMORY_NAME = "Local\\acpmf_physics"
 UDP_IP = "192.168.1.100"  # Replace with your simulator's IP
 UDP_PORT = 20777  # Replace with your target UDP port
 
+# Debug output
+debug_output = False
+
 # Define CSV file path
 write_tx_to_csv = True
 csv_file = "telemetry_log.csv"
+os.remove(csv_file) if os.path.exists(csv_file) else None
 
-# Write header if the file doesn't exist
-if not os.path.exists(csv_file) and write_tx_to_csv:
+# Write header to CSV file
+if write_tx_to_csv:
     with open(csv_file, mode="w", newline="") as file:
         writer = csv.writer(file)
         header = [
@@ -103,16 +107,74 @@ class PhysicsData(ctypes.Structure):
         ("gas", ctypes.c_float),
         ("brake", ctypes.c_float),
         ("fuel", ctypes.c_float),
-        ("speed", ctypes.c_float),
-        ("rpms", ctypes.c_int),
         ("gear", ctypes.c_int),
+        ("rpms", ctypes.c_int),
         ("steer_angle", ctypes.c_float),
+        ("speed_kmh", ctypes.c_float),
+        ("velocity", ctypes.c_float * 3),
+        ("acc_g", ctypes.c_float * 3),
+        ("wheel_slip", ctypes.c_float * 4),
+        ("wheel_load", ctypes.c_float * 4),
+        ("wheels_pressure", ctypes.c_float * 4),
+        ("wheel_angular_speed", ctypes.c_float * 4),
+        ("tyre_wear", ctypes.c_float * 4),
+        ("tyre_dirty_level", ctypes.c_float * 4),
+        ("tyre_core_temperature", ctypes.c_float * 4),
+        ("camber_rad", ctypes.c_float * 4),
+        ("suspension_travel", ctypes.c_float * 4),
+        ("drs", ctypes.c_float),
+        ("tc", ctypes.c_float),
+        ("heading", ctypes.c_float),
+        ("pitch", ctypes.c_float),
+        ("roll", ctypes.c_float),
+        ("cg_height", ctypes.c_float),
+        ("car_damage", ctypes.c_float * 5),
+        ("number_of_tyres_out", ctypes.c_int),
+        ("pit_limiter_on", ctypes.c_int),
+        ("abs", ctypes.c_float),
+        ("kers_charge", ctypes.c_float),
+        ("kers_input", ctypes.c_float),
+        ("auto_shifter_on", ctypes.c_int),
+        ("ride_height", ctypes.c_float * 2),
+        ("turbo_boost", ctypes.c_float),
+        ("ballast", ctypes.c_float),
+        ("air_density", ctypes.c_float),
+        ("air_temp", ctypes.c_float),
+        ("road_temp", ctypes.c_float),
+        ("local_angular_vel", ctypes.c_float * 3),
+        ("final_ff", ctypes.c_float),
+        ("performance_meter", ctypes.c_float),
+        ("engine_brake", ctypes.c_int),
+        ("ers_recovery_level", ctypes.c_int),
+        ("ers_power_level", ctypes.c_int),
+        ("ers_heat_charging", ctypes.c_int),
+        ("ers_is_charging", ctypes.c_int),
+        ("kers_current_kj", ctypes.c_float),
+        ("drs_available", ctypes.c_int),
+        ("drs_enabled", ctypes.c_int),
+        ("brake_temp", ctypes.c_float * 4),
+        ("clutch", ctypes.c_float),
+        ("tyre_temp_i", ctypes.c_float * 4),
+        ("tyre_temp_m", ctypes.c_float * 4),
+        ("tyre_temp_o", ctypes.c_float * 4),
+        ("is_ai_controlled", ctypes.c_int),
+        ("tyre_contact_point", ctypes.c_float * 4 * 3),
+        ("tyre_contact_normal", ctypes.c_float * 4 * 3),
+        ("tyre_contact_heading", ctypes.c_float * 4 * 3),
+        ("brake_bias", ctypes.c_float),
+        ("local_velocity", ctypes.c_float * 3),
+        ("p2p_activations", ctypes.c_int),
+        ("p2p_status", ctypes.c_int),
+        ("current_max_rpm", ctypes.c_int),
+        ("mz", ctypes.c_float * 4),
+        ("fx", ctypes.c_float * 4),
+        ("fy", ctypes.c_float * 4),
+        ("slip_ratio", ctypes.c_float * 4),
+        ("slip_angle", ctypes.c_float * 4),
+        ("tc_in_action", ctypes.c_int),
+        ("abs_in_action", ctypes.c_int),
+        ("suspension_damage", ctypes.c_float * 4),
         ("tyre_temp", ctypes.c_float * 4),
-        ("lap_time", ctypes.c_int),
-        ("last_lap", ctypes.c_int),
-        ("best_lap", ctypes.c_int),
-        ("accG", ctypes.c_float * 3),  # [gLong, gLat, gVert]
-        ("finalFF", ctypes.c_float)  # Force feedback torque
     ]
 
 
@@ -168,14 +230,14 @@ while True:
             float(modelConstants["NCueingMode"]),                       # NCueingMode
             float(modelConstants["BEnableBrakeBooster"]),               # BEnableBrakeBooster
             # Physics data
-            physics_data.accG[2],                                       # gLongDemand
-            physics_data.accG[0],                                       # gLatDemand
-            physics_data.accG[1],                                       # gVertDemand
+            physics_data.acc_g[2],                                       # gLongDemand
+            physics_data.acc_g[0],                                       # gLatDemand
+            physics_data.acc_g[1],                                       # gVertDemand
             0,                                                          # dnRollDemand
             0,                                                          # dnPitchDemand
             0,                                                          # dnYawDemand
             # External cueing
-            physics_data.speed / 3.6,                                   # vLongCar (converted to m/s)
+            physics_data.speed_kmh / 3.6,                                   # vLongCar (converted to m/s)
             # -
             0,                                                          # gLongExternalCueing
             0,                                                          # gLatExternalCueing
@@ -230,7 +292,7 @@ while True:
             0,                                                          # xLongSpeedPreposMax
             0,                                                          # vCarSpeedPreposMin
             0,                                                          # vCarSpeedPreposMax
-            modelConstants["TorqueMultiplier"] * physics_data.finalFF   # NMSteer
+            modelConstants["TorqueMultiplier"] * physics_data.final_ff   # NMSteer
         ]
 
         # Pack the buffer into a binary format (struct.pack for 60 floats)
@@ -240,8 +302,9 @@ while True:
         sock.sendto(udp_packet, (UDP_IP, UDP_PORT))
 
         # Console output (for debugging)
-        print(
-            f"Sent packet {heartbeat} - Speed: {physics_data.speed * 3.6:.1f} km/h, RPM: {physics_data.rpms}, throttle: {physics_data.gas:.1f}, brake: {physics_data.brake:.1f}, Steering Torque: {physics_data.finalFF:.1f}")
+        if debug_output:
+            print(
+                f"Sent packet {heartbeat} - Speed: {physics_data.speed_kmh * 3.6:.1f} km/h, RPM: {physics_data.rpms}, throttle: {physics_data.gas:.1f}, brake: {physics_data.brake:.1f}, Steering Torque: {physics_data.final_ff:.1f}")
 
         if write_tx_to_csv:
             log_to_csv(txbuf)
