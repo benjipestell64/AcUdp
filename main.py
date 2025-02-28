@@ -10,23 +10,24 @@ import os
 # Shared memory name for Assetto Corsa physics data
 AC_SHARED_MEMORY_NAME = "Local\\acpmf_physics"
 
-# Define UDP target (adjust to match your motion simulator's settings)
-UDP_IP = "192.168.1.100"  # Replace with your simulator's IP
-UDP_PORT = 20777  # Replace with your target UDP port
+# Define UDP target
+UDP_IP = "192.168.1.100"
+UDP_TX_PORT = 20777
 
-# Debug output
+# Debug console output
 debug_output = False
 
 # Define CSV file path
 write_tx_to_csv = True
-csv_file = "telemetry_log.csv"
-os.remove(csv_file) if os.path.exists(csv_file) else None
+tx_csv_file = "telemetry_log.csv"
+os.remove(tx_csv_file) if os.path.exists(tx_csv_file) else None
 
 # Write header to CSV file
 if write_tx_to_csv:
-    with open(csv_file, mode="w", newline="") as file:
+    with open(tx_csv_file, mode="w", newline="") as file:
         writer = csv.writer(file)
         header = [
+            "PacketID",
             "Heartbeat",
             "NSimRequest",
             "NCueingMode",
@@ -92,14 +93,16 @@ if write_tx_to_csv:
         writer.writerow(header)
 
 
-# Append data to the CSV file
-def log_to_csv(data):
-    with open(csv_file, mode="a", newline="") as f:
+# Append current data to the CSV file
+def log_to_csv(data, additional_data=None):
+    with open(tx_csv_file, mode="a", newline="") as f:
+        if additional_data:
+            data = additional_data + data
         csv_writer = csv.writer(f)
         csv_writer.writerow(data)
 
 
-# Define the structure of the telemetry data
+# Define the structure of the physics telemetry data
 # noinspection PyTypeChecker
 class PhysicsData(ctypes.Structure):
     _fields_ = [
@@ -180,7 +183,7 @@ class PhysicsData(ctypes.Structure):
 
 PHYSICS_DATA_SIZE = ctypes.sizeof(PhysicsData)
 
-# Default values for model constants & washout settings (adjust as needed)
+# Default values for model constants & washout setting
 modelConstants = {
     "NSimRequest": 1,
     "NCueingMode": 1,
@@ -207,37 +210,41 @@ except FileNotFoundError:
 # Setup UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-heartbeat = True
+bHeartbeat = True
 last_packet_id = -1
 
 print("Reading telemetry data and sending UDP packets...\n")
 
+last_time = time.time()
+
 while True:
+    # Read physics data from shared memory
     file_handle.seek(0)
     raw_data = file_handle.read(PHYSICS_DATA_SIZE)
     physics_data = PhysicsData.from_buffer_copy(raw_data)
 
-    if physics_data.packet_id != last_packet_id:  # Send only when new data is available
+    # If new data is available, assemble and send it
+    if physics_data.packet_id != last_packet_id:
         last_packet_id = physics_data.packet_id
-        heartbeat = not heartbeat  # Beat the heart
+        bHeartbeat = not bHeartbeat  # Beat the heart
 
         # Construct tx buffer (TwinCAT format)
         txbuf = [
             # Heartbeat
-            float(heartbeat),                                           # Heartbeat
+            float(bHeartbeat),                                          # Heartbeat
             # Model constants
             float(modelConstants["NSimRequest"]),                       # NSimRequest
             float(modelConstants["NCueingMode"]),                       # NCueingMode
             float(modelConstants["BEnableBrakeBooster"]),               # BEnableBrakeBooster
             # Physics data
-            physics_data.acc_g[2],                                       # gLongDemand
-            physics_data.acc_g[0],                                       # gLatDemand
-            physics_data.acc_g[1],                                       # gVertDemand
+            physics_data.acc_g[2],                                      # gLongDemand
+            physics_data.acc_g[0],                                      # gLatDemand
+            physics_data.acc_g[1],                                      # gVertDemand
             0,                                                          # dnRollDemand
             0,                                                          # dnPitchDemand
             0,                                                          # dnYawDemand
             # External cueing
-            physics_data.speed_kmh / 3.6,                                   # vLongCar (converted to m/s)
+            physics_data.speed_kmh / 3.6,                               # vLongCar (converted to m/s)
             # -
             0,                                                          # gLongExternalCueing
             0,                                                          # gLatExternalCueing
@@ -292,21 +299,19 @@ while True:
             0,                                                          # xLongSpeedPreposMax
             0,                                                          # vCarSpeedPreposMin
             0,                                                          # vCarSpeedPreposMax
-            modelConstants["TorqueMultiplier"] * physics_data.final_ff   # NMSteer
+            modelConstants["TorqueMultiplier"] * physics_data.final_ff  # NMSteer
         ]
 
         # Pack the buffer into a binary format (struct.pack for 60 floats)
         udp_packet = struct.pack(f"{len(txbuf)}f", *txbuf)
 
         # Send UDP packet
-        sock.sendto(udp_packet, (UDP_IP, UDP_PORT))
+        sock.sendto(udp_packet, (UDP_IP, UDP_TX_PORT))
 
         # Console output (for debugging)
         if debug_output:
-            print(
-                f"Sent packet {heartbeat} - Speed: {physics_data.speed_kmh * 3.6:.1f} km/h, RPM: {physics_data.rpms}, throttle: {physics_data.gas:.1f}, brake: {physics_data.brake:.1f}, Steering Torque: {physics_data.final_ff:.1f}")
+            print(f"Packet sent - Speed: {physics_data.speed_kmh:.1f} km/h, RPM: {physics_data.rpms}, throttle: {physics_data.gas:.1f}, brake: {physics_data.brake:.1f}, Steering Torque: {physics_data.final_ff:.1f}")
 
         if write_tx_to_csv:
-            log_to_csv(txbuf)
-
-    time.sleep(0.01)  # Reduce CPU usage
+            packet_id = physics_data.packet_id
+            log_to_csv(txbuf, [packet_id])
