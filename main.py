@@ -11,10 +11,13 @@ import os
 AC_SHARED_MEMORY_NAME = "Local\\acpmf_physics"
 
 # Define UDP target
-# my_ip = socket.gethostbyname(socket.gethostname())
-# UDP_IP = my_ip
 UDP_IP = "192.168.1.100"
 UDP_TX_PORT = 20777
+TRANSMIT_TO_SELF = False
+
+if TRANSMIT_TO_SELF:
+    my_ip = socket.gethostbyname(socket.gethostname())
+    UDP_IP = my_ip
 
 # Debug console output
 debug_output = False
