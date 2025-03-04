@@ -11,6 +11,8 @@ import os
 AC_SHARED_MEMORY_NAME = "Local\\acpmf_physics"
 
 # Define UDP target
+# my_ip = socket.gethostbyname(socket.gethostname())
+# UDP_IP = my_ip
 UDP_IP = "192.168.1.100"
 UDP_TX_PORT = 20777
 
@@ -18,9 +20,9 @@ UDP_TX_PORT = 20777
 debug_output = False
 
 # Define CSV file path
-write_tx_to_csv = True
+write_tx_to_csv = False
 tx_csv_file = "telemetry_log.csv"
-os.remove(tx_csv_file) if os.path.exists(tx_csv_file) else None
+os.remove(tx_csv_file) if os.path.exists(tx_csv_file) and write_tx_to_csv else None
 
 # Write header to CSV file
 if write_tx_to_csv:
@@ -192,12 +194,12 @@ modelConstants = {
 }
 
 washoutSettings = {
-    "rWashoutLong": 0, "rWashoutLat": 0, "rWashoutVert": 0,
-    "rWashoutRoll": 0, "rWashoutPitch": 0, "rWashoutYaw": 0,
-    "fWashoutLong": 0, "fWashoutLat": 0, "fWashoutVert": 0,
-    "fWashoutRoll": 0, "fWashoutPitch": 0, "fWashoutYaw": 0,
-    "zetaWashoutLong": 0, "zetaWashoutLat": 0, "zetaWashoutVert": 0,
-    "zetaWashoutRoll": 0, "zetaWashoutPitch": 0, "zetaWashoutYaw": 0
+    "rWashoutLong": 1, "rWashoutLat": 1, "rWashoutVert": 1,
+    "rWashoutRoll": 1, "rWashoutPitch": 1, "rWashoutYaw": 1,
+    "fWashoutLong": 1, "fWashoutLat": 2, "fWashoutVert": 2,
+    "fWashoutRoll": 1.5, "fWashoutPitch": 1.5, "fWashoutYaw": 0.5,
+    "zetaWashoutLong": 3, "zetaWashoutLat": 2, "zetaWashoutVert": 4,
+    "zetaWashoutRoll": 4, "zetaWashoutPitch": 3, "zetaWashoutYaw": 2
 }
 
 # Open shared memory
