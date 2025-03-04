@@ -3,6 +3,7 @@ import ctypes
 import time
 import socket
 import struct
+from collections import namedtuple
 
 import csv
 import os
@@ -15,15 +16,13 @@ UDP_IP = "192.168.1.100"
 UDP_TX_PORT = 20777
 TRANSMIT_TO_SELF = False
 
-if TRANSMIT_TO_SELF:
-    my_ip = socket.gethostbyname(socket.gethostname())
-    UDP_IP = my_ip
+UDP_IP = socket.gethostbyname(socket.gethostname()) if TRANSMIT_TO_SELF else UDP_IP
 
 # Debug console output
 debug_output = False
 
 # Define CSV file path
-write_tx_to_csv = False
+write_tx_to_csv = True
 tx_csv_file = "telemetry_log.csv"
 os.remove(tx_csv_file) if os.path.exists(tx_csv_file) and write_tx_to_csv else None
 
@@ -101,10 +100,22 @@ if write_tx_to_csv:
 # Append current data to the CSV file
 def log_to_csv(data, additional_data=None):
     with open(tx_csv_file, mode="a", newline="") as f:
+        data = list(data)
         if additional_data:
             data = additional_data + data
         csv_writer = csv.writer(f)
         csv_writer.writerow(data)
+
+
+def open_shared_memory(retries=3, delay=2):
+    for attempt in range(retries):
+        try:
+            return mmap.mmap(-1, PHYSICS_DATA_SIZE, AC_SHARED_MEMORY_NAME, access=mmap.ACCESS_READ)
+        except FileNotFoundError:
+            print(f"Attempt {attempt + 1}/{retries}: Shared memory not found. Retrying in {delay}s...")
+            time.sleep(delay)
+    print("Assetto Corsa shared memory not found. Exiting.")
+    exit(1)
 
 
 # Define the structure of the physics telemetry data
@@ -205,12 +216,32 @@ washoutSettings = {
     "zetaWashoutRoll": 4, "zetaWashoutPitch": 3, "zetaWashoutYaw": 2
 }
 
+# Define the namedtuple for telemetry data
+TelemetryData = namedtuple('TelemetryData', [
+    "Heartbeat", "NSimRequest", "NCueingMode", "BEnableBrakeBooster",
+    "gLongDemand", "gLatDemand", "gVertDemand",
+    "dnRollDemand", "dnPitchDemand", "dnYawDemand",
+    "vLongCar", "gLongExternalCueing", "gLatExternalCueing", "gVertExternalCueing",
+    "dnRollExternalCueing", "dnPitchExternalCueing", "dnYawExternalCueing",
+    "vLongExternalCueing", "vLatExternalCueing", "vVertExternalCueing",
+    "nRollExternalCueing", "nPitchExternalCueing", "nYawExternalCueing",
+    "xLongExternalCueing", "xLatExternalCueing", "xVertExternalCueing",
+    "aRollExternalCueing", "aPitchExternalCueing", "aYawExternalCueing",
+    "nEngine", "NGear", "rUpshiftCue", "rDownshiftCue", "rEngineCue",
+    "aSlipCue", "nSlipCar", "dnSlipCar", "rSideSlipCue",
+    "rWashoutLong", "rWashoutLat", "rWashoutVert",
+    "rWashoutRoll", "rWashoutPitch", "rWashoutYaw",
+    "fWashoutLong", "fWashoutLat", "fWashoutVert",
+    "fWashoutRoll", "fWashoutPitch", "fWashoutYaw",
+    "zetaWashoutLong", "zetaWashoutLat", "zetaWashoutVert",
+    "zetaWashoutRoll", "zetaWashoutPitch", "zetaWashoutYaw",
+    "xLongSpeedPreposMin", "xLongSpeedPreposMax",
+    "vCarSpeedPreposMin", "vCarSpeedPreposMax",
+    "NMSteer"
+])
+
 # Open shared memory
-try:
-    file_handle = mmap.mmap(-1, PHYSICS_DATA_SIZE, AC_SHARED_MEMORY_NAME, access=mmap.ACCESS_READ)
-except FileNotFoundError:
-    print("Assetto Corsa shared memory not found. Is the game running?")
-    exit(1)
+file_handle = open_shared_memory()
 
 # Setup UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -233,79 +264,70 @@ while True:
         last_packet_id = physics_data.packet_id
         bHeartbeat = not bHeartbeat  # Beat the heart
 
-        # Construct tx buffer (TwinCAT format)
-        txbuf = [
-            # Heartbeat
-            float(bHeartbeat),                                          # Heartbeat
-            # Model constants
-            float(modelConstants["NSimRequest"]),                       # NSimRequest
-            float(modelConstants["NCueingMode"]),                       # NCueingMode
-            float(modelConstants["BEnableBrakeBooster"]),               # BEnableBrakeBooster
-            # Physics data
-            physics_data.acc_g[2],                                      # gLongDemand
-            physics_data.acc_g[0],                                      # gLatDemand
-            physics_data.acc_g[1],                                      # gVertDemand
-            0,                                                          # dnRollDemand
-            0,                                                          # dnPitchDemand
-            0,                                                          # dnYawDemand
-            # External cueing
-            physics_data.speed_kmh / 3.6,                               # vLongCar (converted to m/s)
-            # -
-            0,                                                          # gLongExternalCueing
-            0,                                                          # gLatExternalCueing
-            0,                                                          # gVertExternalCueing
-            0,                                                          # dnRollExternalCueing
-            0,                                                          # dnPitchExternalCueing
-            0,                                                          # dnYawExternalCueing
-            # -
-            0,                                                          # vLongExternalCueing
-            0,                                                          # vLatExternalCueing
-            0,                                                          # vVertExternalCueing
-            0,                                                          # nRollExternalCueing
-            0,                                                          # nPitchExternalCueing
-            0,                                                          # nYawExternalCueing
-            0,                                                          # xLongExternalCueing
-            0,                                                          # xLatExternalCueing
-            0,                                                          # xVertExternalCueing
-            0,                                                          # aRollExternalCueing
-            0,                                                          # aPitchExternalCueing
-            0,                                                          # aYawExternalCueing
-            # Drive train
-            physics_data.rpms * (2 * 3.142 / 60),                       # nEngine (convert RPM to rad/s)
-            float(physics_data.gear),                                   # NGear
-            0,                                                          # rUpshiftCue
-            0,                                                          # rDownshiftCue
-            0,                                                          # rEngineCue
-            # Slip cueing
-            0,                                                          # aSlipCue
-            0,                                                          # nSlipCar
-            0,                                                          # dnSlipCar
-            0,                                                          # rSideSlipCue
-            # Washout settings
-            float(washoutSettings["rWashoutLong"]),                     # rWashoutLong
-            float(washoutSettings["rWashoutLat"]),                      # rWashoutLat
-            float(washoutSettings["rWashoutVert"]),                     # rWashoutVert
-            float(washoutSettings["rWashoutRoll"]),                     # rWashoutRoll
-            float(washoutSettings["rWashoutPitch"]),                    # rWashoutPitch
-            float(washoutSettings["rWashoutYaw"]),                      # rWashoutYaw
-            float(washoutSettings["fWashoutLong"]),                     # fWashoutLong
-            float(washoutSettings["fWashoutLat"]),                      # fWashoutLat
-            float(washoutSettings["fWashoutVert"]),                     # fWashoutVert
-            float(washoutSettings["fWashoutRoll"]),                     # fWashoutRoll
-            float(washoutSettings["fWashoutPitch"]),                    # fWashoutPitch
-            float(washoutSettings["fWashoutYaw"]),                      # fWashoutYaw
-            float(washoutSettings["zetaWashoutLong"]),                  # zetaWashoutLong
-            float(washoutSettings["zetaWashoutLat"]),                   # zetaWashoutLat
-            float(washoutSettings["zetaWashoutVert"]),                  # zetaWashoutVert
-            float(washoutSettings["zetaWashoutRoll"]),                  # zetaWashoutRoll
-            float(washoutSettings["zetaWashoutPitch"]),                 # zetaWashoutPitch
-            float(washoutSettings["zetaWashoutYaw"]),                   # zetaWashoutYaw
-            0,                                                          # xLongSpeedPreposMin
-            0,                                                          # xLongSpeedPreposMax
-            0,                                                          # vCarSpeedPreposMin
-            0,                                                          # vCarSpeedPreposMax
-            modelConstants["TorqueMultiplier"] * physics_data.final_ff  # NMSteer
-        ]
+        # Construct tx buffer using namedTuple (TwinCAT format)
+        txbuf = TelemetryData(
+            Heartbeat=float(bHeartbeat),
+            NSimRequest=float(modelConstants["NSimRequest"]),
+            NCueingMode=float(modelConstants["NCueingMode"]),
+            BEnableBrakeBooster=float(modelConstants["BEnableBrakeBooster"]),
+            gLongDemand=physics_data.acc_g[2],
+            gLatDemand=physics_data.acc_g[0],
+            gVertDemand=physics_data.acc_g[1],
+            dnRollDemand=0.0,
+            dnPitchDemand=0.0,
+            dnYawDemand=0.0,
+            vLongCar=physics_data.speed_kmh / 3.6,
+            gLongExternalCueing=0.0,
+            gLatExternalCueing=0.0,
+            gVertExternalCueing=0.0,
+            dnRollExternalCueing=0.0,
+            dnPitchExternalCueing=0.0,
+            dnYawExternalCueing=0.0,
+            vLongExternalCueing=0.0,
+            vLatExternalCueing=0.0,
+            vVertExternalCueing=0.0,
+            nRollExternalCueing=0.0,
+            nPitchExternalCueing=0.0,
+            nYawExternalCueing=0.0,
+            xLongExternalCueing=0.0,
+            xLatExternalCueing=0.0,
+            xVertExternalCueing=0.0,
+            aRollExternalCueing=0.0,
+            aPitchExternalCueing=0.0,
+            aYawExternalCueing=0.0,
+            nEngine=physics_data.rpms * (2 * 3.142 / 60),
+            NGear=float(physics_data.gear),
+            rUpshiftCue=0.0,
+            rDownshiftCue=0.0,
+            rEngineCue=0.0,
+            aSlipCue=0.0,
+            nSlipCar=0.0,
+            dnSlipCar=0.0,
+            rSideSlipCue=0.0,
+            rWashoutLong=float(washoutSettings["rWashoutLong"]),
+            rWashoutLat=float(washoutSettings["rWashoutLat"]),
+            rWashoutVert=float(washoutSettings["rWashoutVert"]),
+            rWashoutRoll=float(washoutSettings["rWashoutRoll"]),
+            rWashoutPitch=float(washoutSettings["rWashoutPitch"]),
+            rWashoutYaw=float(washoutSettings["rWashoutYaw"]),
+            fWashoutLong=float(washoutSettings["fWashoutLong"]),
+            fWashoutLat=float(washoutSettings["fWashoutLat"]),
+            fWashoutVert=float(washoutSettings["fWashoutVert"]),
+            fWashoutRoll=float(washoutSettings["fWashoutRoll"]),
+            fWashoutPitch=float(washoutSettings["fWashoutPitch"]),
+            fWashoutYaw=float(washoutSettings["fWashoutYaw"]),
+            zetaWashoutLong=float(washoutSettings["zetaWashoutLong"]),
+            zetaWashoutLat=float(washoutSettings["zetaWashoutLat"]),
+            zetaWashoutVert=float(washoutSettings["zetaWashoutVert"]),
+            zetaWashoutRoll=float(washoutSettings["zetaWashoutRoll"]),
+            zetaWashoutPitch=float(washoutSettings["zetaWashoutPitch"]),
+            zetaWashoutYaw=float(washoutSettings["zetaWashoutYaw"]),
+            xLongSpeedPreposMin=0.0,
+            xLongSpeedPreposMax=0.0,
+            vCarSpeedPreposMin=0.0,
+            vCarSpeedPreposMax=0.0,
+            NMSteer=physics_data.final_ff * float(modelConstants["TorqueMultiplier"])
+        )
 
         # Pack the buffer into a binary format (struct.pack for 60 floats)
         udp_packet = struct.pack(f"{len(txbuf)}f", *txbuf)
