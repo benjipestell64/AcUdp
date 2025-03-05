@@ -14,7 +14,7 @@ AC_SHARED_MEMORY_NAME = "Local\\acpmf_physics"
 # Define UDP target
 UDP_IP = "192.168.1.100"
 UDP_TX_PORT = 20777
-TRANSMIT_TO_SELF = False
+TRANSMIT_TO_SELF = False  # For debugging purposes
 
 UDP_IP = socket.gethostbyname(socket.gethostname()) if TRANSMIT_TO_SELF else UDP_IP
 
@@ -26,75 +26,54 @@ write_tx_to_csv = True
 tx_csv_file = "telemetry_log.csv"
 os.remove(tx_csv_file) if os.path.exists(tx_csv_file) and write_tx_to_csv else None
 
+# Default values for model constants & washout setting
+modelConstants = {
+    "NSimRequest": 1,
+    "NCueingMode": 1,
+    "BEnableBrakeBooster": 0,
+    "TorqueMultiplier": 1.0
+}
+
+washoutSettings = {
+    "rWashoutLong": 1, "rWashoutLat": 1, "rWashoutVert": 1,
+    "rWashoutRoll": 1, "rWashoutPitch": 1, "rWashoutYaw": 1,
+    "fWashoutLong": 1, "fWashoutLat": 2, "fWashoutVert": 2,
+    "fWashoutRoll": 1.5, "fWashoutPitch": 1.5, "fWashoutYaw": 0.5,
+    "zetaWashoutLong": 3, "zetaWashoutLat": 2, "zetaWashoutVert": 4,
+    "zetaWashoutRoll": 4, "zetaWashoutPitch": 3, "zetaWashoutYaw": 2
+}
+
+# Define the namedtuple for telemetry data
+TelemetryData = namedtuple('TelemetryData', [
+    "Heartbeat", "NSimRequest", "NCueingMode", "BEnableBrakeBooster",
+    "gLongDemand", "gLatDemand", "gVertDemand",
+    "dnRollDemand", "dnPitchDemand", "dnYawDemand",
+    "vLongCar", "gLongExternalCueing", "gLatExternalCueing", "gVertExternalCueing",
+    "dnRollExternalCueing", "dnPitchExternalCueing", "dnYawExternalCueing",
+    "vLongExternalCueing", "vLatExternalCueing", "vVertExternalCueing",
+    "nRollExternalCueing", "nPitchExternalCueing", "nYawExternalCueing",
+    "xLongExternalCueing", "xLatExternalCueing", "xVertExternalCueing",
+    "aRollExternalCueing", "aPitchExternalCueing", "aYawExternalCueing",
+    "nEngine", "NGear", "rUpshiftCue", "rDownshiftCue", "rEngineCue",
+    "aSlipCue", "nSlipCar", "dnSlipCar", "rSideSlipCue",
+    "rWashoutLong", "rWashoutLat", "rWashoutVert",
+    "rWashoutRoll", "rWashoutPitch", "rWashoutYaw",
+    "fWashoutLong", "fWashoutLat", "fWashoutVert",
+    "fWashoutRoll", "fWashoutPitch", "fWashoutYaw",
+    "zetaWashoutLong", "zetaWashoutLat", "zetaWashoutVert",
+    "zetaWashoutRoll", "zetaWashoutPitch", "zetaWashoutYaw",
+    "xLongSpeedPreposMin", "xLongSpeedPreposMax",
+    "vCarSpeedPreposMin", "vCarSpeedPreposMax",
+    "NMSteer"
+])
+
 # Write header to CSV file
 if write_tx_to_csv:
+    # Extract headers directly from TelemetryData namedtuple
+    headers = TelemetryData._fields
     with open(tx_csv_file, mode="w", newline="") as file:
         writer = csv.writer(file)
-        header = [
-            "PacketID",
-            "Heartbeat",
-            "NSimRequest",
-            "NCueingMode",
-            "BEnableBrakeBooster",
-            "gLongDemand",
-            "gLatDemand",
-            "gVertDemand",
-            "dnRollDemand",
-            "dnPitchDemand",
-            "dnYawDemand",
-            "vLongCar",
-            "gLongExternalCueing",
-            "gLatExternalCueing",
-            "gVertExternalCueing",
-            "dnRollExternalCueing",
-            "dnPitchExternalCueing",
-            "dnYawExternalCueing",
-            "vLongExternalCueing",
-            "vLatExternalCueing",
-            "vVertExternalCueing",
-            "nRollExternalCueing",
-            "nPitchExternalCueing",
-            "nYawExternalCueing",
-            "xLongExternalCueing",
-            "xLatExternalCueing",
-            "xVertExternalCueing",
-            "aRollExternalCueing",
-            "aPitchExternalCueing",
-            "aYawExternalCueing",
-            "nEngine",
-            "NGear",
-            "rUpshiftCue",
-            "rDownshiftCue",
-            "rEngineCue",
-            "aSlipCue",
-            "nSlipCar",
-            "dnSlipCar",
-            "rSideSlipCue",
-            "rWashoutLong",
-            "rWashoutLat",
-            "rWashoutVert",
-            "rWashoutRoll",
-            "rWashoutPitch",
-            "rWashoutYaw",
-            "fWashoutLong",
-            "fWashoutLat",
-            "fWashoutVert",
-            "fWashoutRoll",
-            "fWashoutPitch",
-            "fWashoutYaw",
-            "zetaWashoutLong",
-            "zetaWashoutLat",
-            "zetaWashoutVert",
-            "zetaWashoutRoll",
-            "zetaWashoutPitch",
-            "zetaWashoutYaw",
-            "xLongSpeedPreposMin",
-            "xLongSpeedPreposMax",
-            "vCarSpeedPreposMin",
-            "vCarSpeedPreposMax",
-            "NMSteer"
-        ]
-        writer.writerow(header)
+        writer.writerow(["PacketID"] + list(headers))  # Add PacketID as the first column
 
 
 # Append current data to the CSV file
@@ -198,47 +177,6 @@ class PhysicsData(ctypes.Structure):
 
 
 PHYSICS_DATA_SIZE = ctypes.sizeof(PhysicsData)
-
-# Default values for model constants & washout setting
-modelConstants = {
-    "NSimRequest": 1,
-    "NCueingMode": 1,
-    "BEnableBrakeBooster": 0,
-    "TorqueMultiplier": 1.0
-}
-
-washoutSettings = {
-    "rWashoutLong": 1, "rWashoutLat": 1, "rWashoutVert": 1,
-    "rWashoutRoll": 1, "rWashoutPitch": 1, "rWashoutYaw": 1,
-    "fWashoutLong": 1, "fWashoutLat": 2, "fWashoutVert": 2,
-    "fWashoutRoll": 1.5, "fWashoutPitch": 1.5, "fWashoutYaw": 0.5,
-    "zetaWashoutLong": 3, "zetaWashoutLat": 2, "zetaWashoutVert": 4,
-    "zetaWashoutRoll": 4, "zetaWashoutPitch": 3, "zetaWashoutYaw": 2
-}
-
-# Define the namedtuple for telemetry data
-TelemetryData = namedtuple('TelemetryData', [
-    "Heartbeat", "NSimRequest", "NCueingMode", "BEnableBrakeBooster",
-    "gLongDemand", "gLatDemand", "gVertDemand",
-    "dnRollDemand", "dnPitchDemand", "dnYawDemand",
-    "vLongCar", "gLongExternalCueing", "gLatExternalCueing", "gVertExternalCueing",
-    "dnRollExternalCueing", "dnPitchExternalCueing", "dnYawExternalCueing",
-    "vLongExternalCueing", "vLatExternalCueing", "vVertExternalCueing",
-    "nRollExternalCueing", "nPitchExternalCueing", "nYawExternalCueing",
-    "xLongExternalCueing", "xLatExternalCueing", "xVertExternalCueing",
-    "aRollExternalCueing", "aPitchExternalCueing", "aYawExternalCueing",
-    "nEngine", "NGear", "rUpshiftCue", "rDownshiftCue", "rEngineCue",
-    "aSlipCue", "nSlipCar", "dnSlipCar", "rSideSlipCue",
-    "rWashoutLong", "rWashoutLat", "rWashoutVert",
-    "rWashoutRoll", "rWashoutPitch", "rWashoutYaw",
-    "fWashoutLong", "fWashoutLat", "fWashoutVert",
-    "fWashoutRoll", "fWashoutPitch", "fWashoutYaw",
-    "zetaWashoutLong", "zetaWashoutLat", "zetaWashoutVert",
-    "zetaWashoutRoll", "zetaWashoutPitch", "zetaWashoutYaw",
-    "xLongSpeedPreposMin", "xLongSpeedPreposMax",
-    "vCarSpeedPreposMin", "vCarSpeedPreposMax",
-    "NMSteer"
-])
 
 # Open shared memory
 file_handle = open_shared_memory()
