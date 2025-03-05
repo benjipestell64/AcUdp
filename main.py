@@ -24,7 +24,6 @@ debug_output = False
 # Define CSV file path
 write_tx_to_csv = True
 tx_csv_file = "telemetry_log.csv"
-os.remove(tx_csv_file) if os.path.exists(tx_csv_file) and write_tx_to_csv else None
 
 # Default values for model constants & washout setting
 modelConstants = {
@@ -69,6 +68,7 @@ TelemetryData = namedtuple('TelemetryData', [
 
 # Write header to CSV file
 if write_tx_to_csv:
+    os.remove(tx_csv_file) if os.path.exists(tx_csv_file) else None
     # Extract headers directly from TelemetryData namedtuple
     headers = TelemetryData._fields
     with open(tx_csv_file, mode="w", newline="") as file:
@@ -188,8 +188,6 @@ bHeartbeat = True
 last_packet_id = -1
 
 print("Reading telemetry data and sending UDP packets...\n")
-
-last_time = time.time()
 
 while True:
     # Read physics data from shared memory
