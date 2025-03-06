@@ -187,9 +187,6 @@ class PhysicsData(ctypes.Structure):
 
 PHYSICS_DATA_SIZE = ctypes.sizeof(PhysicsData)
 
-# Open shared memory
-file_handle = open_shared_memory(retries=100, delay=3)
-
 # Setup UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -200,15 +197,20 @@ last_packet_id = -1
 print("Waiting for Assetto Corsa to start...")
 
 while True:
+    retry_logged = False
     while not is_game_running():
-        print("Game not detected. Retrying in 5 seconds...")
-        time.sleep(5)
+        if not retry_logged:
+            print("Game not detected. Retrying...\n")
+            retry_logged = True
+        time.sleep(3)
 
-    print("Game detected! Connecting to shared memory...")
-    time.sleep(4)  # Wait for the game to fully load
+    print("Game detected! Allowing time for game start...")
+    time.sleep(10)  # Wait for the game to fully load
+
+    # Open shared memory
+    file_handle = open_shared_memory()
 
     print("Reading telemetry data and sending UDP packets...\n")
-
     while is_game_running():
 
         # Read physics data from shared memory
