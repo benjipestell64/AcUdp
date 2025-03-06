@@ -190,6 +190,7 @@ PHYSICS_DATA_SIZE = ctypes.sizeof(PhysicsData)
 
 
 # Define the structure of the graphics telemetry data
+# noinspection PyTypeChecker
 class GraphicsData(ctypes.Structure):
     _fields_ = [
         ("packet_id", ctypes.c_int),
