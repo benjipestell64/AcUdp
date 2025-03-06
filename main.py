@@ -5,7 +5,7 @@ import socket
 import struct
 from collections import namedtuple
 import pygetwindow as gw
-
+import sys
 import csv
 import os
 
@@ -17,14 +17,14 @@ AC_GRAPHICS_MEMORY_NAME = "Local\\acpmf_graphics"
 UDP_IP = "192.168.1.100"
 UDP_TX_PORT = 20777
 TRANSMIT_TO_SELF = False  # For debugging purposes
-
 UDP_IP = socket.gethostbyname(socket.gethostname()) if TRANSMIT_TO_SELF else UDP_IP
 
 # Debug console output
 debug_output = False
 
-# Define CSV file path
-write_tx_to_csv = False
+# CSV logging settings
+write_tx_to_csv = True
+log_execution_time = True
 tx_csv_file = "telemetry_log.csv"
 
 # Default values for model constants & washout setting
@@ -68,15 +68,6 @@ TelemetryData = namedtuple('TelemetryData', [
     "NMSteer"
 ])
 
-# Write header to CSV file
-if write_tx_to_csv:
-    os.remove(tx_csv_file) if os.path.exists(tx_csv_file) else None
-    # Extract headers directly from TelemetryData namedtuple
-    headers = TelemetryData._fields
-    with open(tx_csv_file, mode="w", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow(["PacketID"] + list(headers))  # Add PacketID as the first column
-
 
 # Check if the game window is open
 def is_game_running():
@@ -87,15 +78,7 @@ def is_game_running():
     return False
 
 
-def log_to_csv(data, additional_data=None):
-    with open(tx_csv_file, mode="a", newline="") as f:
-        data = list(data)
-        if additional_data:
-            data = additional_data + data
-        csv_writer = csv.writer(f)
-        csv_writer.writerow(data)
-
-
+# Open shared memory
 def open_shared_memory(name, size, retries=3, delay=2):
     for attempt in range(retries):
         try:
@@ -105,6 +88,42 @@ def open_shared_memory(name, size, retries=3, delay=2):
             time.sleep(delay)
     print(f"Shared memory '{name}' not found. Exiting.")
     exit(1)
+
+
+def update_console_state(state):
+    # Move cursor back to the start of the line and print the status
+    sys.stdout.write(f"\rStatus: [{state}]")
+    sys.stdout.flush()
+
+
+# CSVLogger class to handle CSV operations
+class CSVLogger:
+    def __init__(self, file_path, headers, bool_log_execution_time=False):
+        self.file_path = file_path
+        self.log_execution_time = bool_log_execution_time
+
+        # Remove existing file if it exists
+        if os.path.exists(self.file_path):
+            os.remove(self.file_path)
+
+        # Create CSV file with headers
+        self.create_csv(headers)
+
+    def create_csv(self, column_headers):
+        with open(self.file_path, mode="w", newline="") as file:
+            csv_writer = csv.writer(file)
+            if self.log_execution_time:
+                csv_writer.writerow(["Latency", "PacketID"] + list(column_headers))
+            else:
+                csv_writer.writerow(["PacketID"] + list(column_headers))
+
+    def log(self, data, additional_data=None):
+        with open(self.file_path, mode="a", newline="") as file:
+            data = list(data)
+            if additional_data:
+                data = additional_data + data
+            csv_writer = csv.writer(file)
+            csv_writer.writerow(data)
 
 
 # Define the structure of the physics telemetry data
@@ -242,17 +261,22 @@ GRAPHICS_DATA_SIZE = ctypes.sizeof(GraphicsData)
 # Setup UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+# Setup initial values
 bHeartbeat = True
 last_packet_id = -1
+last_time = time.time()
 
-# Wait for the game to start
-print("Waiting for Assetto Corsa to start...")
+# Initialize CSV logger
+csv_logger = None
+if write_tx_to_csv:
+    # noinspection PyRedeclaration
+    csv_logger = CSVLogger(tx_csv_file, TelemetryData._fields, log_execution_time)
 
 while True:
     retry_logged = False
     while not is_game_running():
         if not retry_logged:
-            print("Game not detected. Retrying...\n")
+            print("Game not detected. Waiting...\n")
             retry_logged = True
         time.sleep(3)
 
@@ -264,7 +288,12 @@ while True:
     graphics_file_handle = open_shared_memory(AC_GRAPHICS_MEMORY_NAME, GRAPHICS_DATA_SIZE)
 
     print("Reading telemetry data and sending UDP packets...\n")
+    update_console_state("")
     while is_game_running():
+        if log_execution_time:
+            current_time = time.time()
+            time_taken = current_time - last_time
+            last_time = current_time
 
         # Read physics data from shared memory
         physics_file_handle.seek(0)
@@ -278,8 +307,9 @@ while True:
 
         # If new data is available, assemble and send it
         if physics_data.packet_id != last_packet_id:
+            update_console_state("●")
             last_packet_id = physics_data.packet_id
-            bHeartbeat = not bHeartbeat  # Beat the heart
+            bHeartbeat = not bHeartbeat  # Beat heart
 
             # Construct tx buffer using namedTuple (TwinCAT format)
             txbuf = TelemetryData(
@@ -359,4 +389,10 @@ while True:
 
             if write_tx_to_csv:
                 packet_id = physics_data.packet_id
-                log_to_csv(txbuf, [packet_id])
+                if log_execution_time:
+                    csv_logger.log(txbuf, [time_taken, packet_id])
+                else:
+                    csv_logger.log(txbuf, [packet_id])
+
+        else:
+            update_console_state("○")
