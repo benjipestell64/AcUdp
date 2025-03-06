@@ -9,8 +9,9 @@ import pygetwindow as gw
 import csv
 import os
 
-# Shared memory name for Assetto Corsa physics data
-AC_SHARED_MEMORY_NAME = "Local\\acpmf_physics"
+# Shared memory name for Assetto Corsa physics & graphics data
+AC_PHYSICS_MEMORY_NAME = "Local\\acpmf_physics"
+AC_GRAPHICS_MEMORY_NAME = "Local\\acpmf_graphics"
 
 # Define UDP target
 UDP_IP = "192.168.1.100"
@@ -23,7 +24,7 @@ UDP_IP = socket.gethostbyname(socket.gethostname()) if TRANSMIT_TO_SELF else UDP
 debug_output = False
 
 # Define CSV file path
-write_tx_to_csv = True
+write_tx_to_csv = False
 tx_csv_file = "telemetry_log.csv"
 
 # Default values for model constants & washout setting
@@ -95,14 +96,14 @@ def log_to_csv(data, additional_data=None):
         csv_writer.writerow(data)
 
 
-def open_shared_memory(retries=3, delay=2):
+def open_shared_memory(name, size, retries=3, delay=2):
     for attempt in range(retries):
         try:
-            return mmap.mmap(-1, PHYSICS_DATA_SIZE, AC_SHARED_MEMORY_NAME, access=mmap.ACCESS_READ)
+            return mmap.mmap(-1, size, name, access=mmap.ACCESS_READ)
         except FileNotFoundError:
-            print(f"Attempt {attempt + 1}/{retries}: Shared memory not found. Retrying in {delay}s...")
+            print(f"Attempt {attempt + 1}/{retries}: Shared memory '{name}' not found. Retrying in {delay}s...")
             time.sleep(delay)
-    print("Assetto Corsa shared memory not found. Exiting.")
+    print(f"Shared memory '{name}' not found. Exiting.")
     exit(1)
 
 
@@ -187,6 +188,56 @@ class PhysicsData(ctypes.Structure):
 
 PHYSICS_DATA_SIZE = ctypes.sizeof(PhysicsData)
 
+
+# Define the structure of the graphics telemetry data
+class GraphicsData(ctypes.Structure):
+    _fields_ = [
+        ("packet_id", ctypes.c_int),
+        ("status", ctypes.c_int),
+        ("session", ctypes.c_int),
+        ("current_time", ctypes.c_wchar * 15),
+        ("last_time", ctypes.c_wchar * 15),
+        ("best_time", ctypes.c_wchar * 15),
+        ("split", ctypes.c_wchar * 15),
+        ("completed_laps", ctypes.c_int),
+        ("position", ctypes.c_int),
+        ("i_current_time", ctypes.c_int),
+        ("i_last_time", ctypes.c_int),
+        ("i_best_time", ctypes.c_int),
+        ("session_time_left", ctypes.c_float),
+        ("distance_traveled", ctypes.c_float),
+        ("is_in_pit", ctypes.c_int),
+        ("current_sector_index", ctypes.c_int),
+        ("last_sector_time", ctypes.c_int),
+        ("number_of_laps", ctypes.c_int),
+        ("tyre_compound", ctypes.c_wchar * 33),
+        ("replay_time_multiplier", ctypes.c_float),
+        ("normalized_car_position", ctypes.c_float),
+        ("active_cars", ctypes.c_int),
+        ("car_coordinates", ctypes.c_float * 60 * 3),
+        ("car_id", ctypes.c_int * 60),
+        ("player_car_id", ctypes.c_int),
+        ("penalty_time", ctypes.c_float),
+        ("flag", ctypes.c_int),
+        ("penalty", ctypes.c_int),
+        ("ideal_line_on", ctypes.c_int),
+        ("is_in_pit_lane", ctypes.c_int),
+        ("surface_grip", ctypes.c_float),
+        ("mandatory_pit_done", ctypes.c_int),
+        ("wind_speed", ctypes.c_float),
+        ("wind_direction", ctypes.c_float),
+        ("is_setup_menu_visible", ctypes.c_int),
+        ("main_display_index", ctypes.c_int),
+        ("secondary_display_index", ctypes.c_int),
+        ("TC", ctypes.c_int),
+        ("TCCut", ctypes.c_int),
+        ("EngineMap", ctypes.c_int),
+        ("ABS", ctypes.c_int)
+    ]
+
+
+GRAPHICS_DATA_SIZE = ctypes.sizeof(GraphicsData)
+
 # Setup UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -208,15 +259,21 @@ while True:
     time.sleep(10)  # Wait for the game to fully load
 
     # Open shared memory
-    file_handle = open_shared_memory()
+    physics_file_handle = open_shared_memory(AC_PHYSICS_MEMORY_NAME, PHYSICS_DATA_SIZE)
+    graphics_file_handle = open_shared_memory(AC_GRAPHICS_MEMORY_NAME, GRAPHICS_DATA_SIZE)
 
     print("Reading telemetry data and sending UDP packets...\n")
     while is_game_running():
 
         # Read physics data from shared memory
-        file_handle.seek(0)
-        raw_data = file_handle.read(PHYSICS_DATA_SIZE)
+        physics_file_handle.seek(0)
+        raw_data = physics_file_handle.read(PHYSICS_DATA_SIZE)
         physics_data = PhysicsData.from_buffer_copy(raw_data)
+
+        # Read graphics data from shared memory
+        graphics_file_handle.seek(0)
+        raw_data = graphics_file_handle.read(GRAPHICS_DATA_SIZE)
+        graphics_data = GraphicsData.from_buffer_copy(raw_data)
 
         # If new data is available, assemble and send it
         if physics_data.packet_id != last_packet_id:
