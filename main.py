@@ -4,6 +4,7 @@ import time
 import socket
 import struct
 from collections import namedtuple
+import pygetwindow as gw
 
 import csv
 import os
@@ -76,7 +77,15 @@ if write_tx_to_csv:
         writer.writerow(["PacketID"] + list(headers))  # Add PacketID as the first column
 
 
-# Append current data to the CSV file
+# Check if the game window is open
+def is_game_running():
+    windows = gw.getAllTitles()
+    for title in windows:
+        if "assetto corsa" in title.lower() and "launcher" not in title.lower():
+            return True
+    return False
+
+
 def log_to_csv(data, additional_data=None):
     with open(tx_csv_file, mode="a", newline="") as f:
         data = list(data)
@@ -179,7 +188,7 @@ class PhysicsData(ctypes.Structure):
 PHYSICS_DATA_SIZE = ctypes.sizeof(PhysicsData)
 
 # Open shared memory
-file_handle = open_shared_memory()
+file_handle = open_shared_memory(retries=100, delay=3)
 
 # Setup UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -187,94 +196,107 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 bHeartbeat = True
 last_packet_id = -1
 
-print("Reading telemetry data and sending UDP packets...\n")
+# Wait for the game to start
+print("Waiting for Assetto Corsa to start...")
 
 while True:
-    # Read physics data from shared memory
-    file_handle.seek(0)
-    raw_data = file_handle.read(PHYSICS_DATA_SIZE)
-    physics_data = PhysicsData.from_buffer_copy(raw_data)
+    while not is_game_running():
+        print("Game not detected. Retrying in 5 seconds...")
+        time.sleep(5)
 
-    # If new data is available, assemble and send it
-    if physics_data.packet_id != last_packet_id:
-        last_packet_id = physics_data.packet_id
-        bHeartbeat = not bHeartbeat  # Beat the heart
+    print("Game detected! Connecting to shared memory...")
+    time.sleep(4)  # Wait for the game to fully load
 
-        # Construct tx buffer using namedTuple (TwinCAT format)
-        txbuf = TelemetryData(
-            Heartbeat=float(bHeartbeat),
-            NSimRequest=float(modelConstants["NSimRequest"]),
-            NCueingMode=float(modelConstants["NCueingMode"]),
-            BEnableBrakeBooster=float(modelConstants["BEnableBrakeBooster"]),
-            gLongDemand=physics_data.acc_g[2],
-            gLatDemand=physics_data.acc_g[0],
-            gVertDemand=physics_data.acc_g[1],
-            dnRollDemand=0.0,
-            dnPitchDemand=0.0,
-            dnYawDemand=0.0,
-            vLongCar=physics_data.speed_kmh / 3.6,
-            gLongExternalCueing=0.0,
-            gLatExternalCueing=0.0,
-            gVertExternalCueing=0.0,
-            dnRollExternalCueing=0.0,
-            dnPitchExternalCueing=0.0,
-            dnYawExternalCueing=0.0,
-            vLongExternalCueing=0.0,
-            vLatExternalCueing=0.0,
-            vVertExternalCueing=0.0,
-            nRollExternalCueing=0.0,
-            nPitchExternalCueing=0.0,
-            nYawExternalCueing=0.0,
-            xLongExternalCueing=0.0,
-            xLatExternalCueing=0.0,
-            xVertExternalCueing=0.0,
-            aRollExternalCueing=0.0,
-            aPitchExternalCueing=0.0,
-            aYawExternalCueing=0.0,
-            nEngine=physics_data.rpms * (2 * 3.142 / 60),
-            NGear=float(physics_data.gear),
-            rUpshiftCue=0.0,
-            rDownshiftCue=0.0,
-            rEngineCue=0.0,
-            aSlipCue=0.0,
-            nSlipCar=0.0,
-            dnSlipCar=0.0,
-            rSideSlipCue=0.0,
-            rWashoutLong=float(washoutSettings["rWashoutLong"]),
-            rWashoutLat=float(washoutSettings["rWashoutLat"]),
-            rWashoutVert=float(washoutSettings["rWashoutVert"]),
-            rWashoutRoll=float(washoutSettings["rWashoutRoll"]),
-            rWashoutPitch=float(washoutSettings["rWashoutPitch"]),
-            rWashoutYaw=float(washoutSettings["rWashoutYaw"]),
-            fWashoutLong=float(washoutSettings["fWashoutLong"]),
-            fWashoutLat=float(washoutSettings["fWashoutLat"]),
-            fWashoutVert=float(washoutSettings["fWashoutVert"]),
-            fWashoutRoll=float(washoutSettings["fWashoutRoll"]),
-            fWashoutPitch=float(washoutSettings["fWashoutPitch"]),
-            fWashoutYaw=float(washoutSettings["fWashoutYaw"]),
-            zetaWashoutLong=float(washoutSettings["zetaWashoutLong"]),
-            zetaWashoutLat=float(washoutSettings["zetaWashoutLat"]),
-            zetaWashoutVert=float(washoutSettings["zetaWashoutVert"]),
-            zetaWashoutRoll=float(washoutSettings["zetaWashoutRoll"]),
-            zetaWashoutPitch=float(washoutSettings["zetaWashoutPitch"]),
-            zetaWashoutYaw=float(washoutSettings["zetaWashoutYaw"]),
-            xLongSpeedPreposMin=0.0,
-            xLongSpeedPreposMax=0.0,
-            vCarSpeedPreposMin=0.0,
-            vCarSpeedPreposMax=0.0,
-            NMSteer=physics_data.final_ff * float(modelConstants["TorqueMultiplier"])
-        )
+    print("Reading telemetry data and sending UDP packets...\n")
 
-        # Pack the buffer into a binary format (struct.pack for 60 floats)
-        udp_packet = struct.pack(f"{len(txbuf)}f", *txbuf)
+    while is_game_running():
 
-        # Send UDP packet
-        sock.sendto(udp_packet, (UDP_IP, UDP_TX_PORT))
+        # Read physics data from shared memory
+        file_handle.seek(0)
+        raw_data = file_handle.read(PHYSICS_DATA_SIZE)
+        physics_data = PhysicsData.from_buffer_copy(raw_data)
 
-        # Console output (for debugging)
-        if debug_output:
-            print(f"Packet sent - Speed: {physics_data.speed_kmh:.1f} km/h, RPM: {physics_data.rpms}, throttle: {physics_data.gas:.1f}, brake: {physics_data.brake:.1f}, Steering Torque: {physics_data.final_ff:.1f}")
+        # If new data is available, assemble and send it
+        if physics_data.packet_id != last_packet_id:
+            last_packet_id = physics_data.packet_id
+            bHeartbeat = not bHeartbeat  # Beat the heart
 
-        if write_tx_to_csv:
-            packet_id = physics_data.packet_id
-            log_to_csv(txbuf, [packet_id])
+            # Construct tx buffer using namedTuple (TwinCAT format)
+            txbuf = TelemetryData(
+                Heartbeat=float(bHeartbeat),
+                NSimRequest=float(modelConstants["NSimRequest"]),
+                NCueingMode=float(modelConstants["NCueingMode"]),
+                BEnableBrakeBooster=float(modelConstants["BEnableBrakeBooster"]),
+                gLongDemand=physics_data.acc_g[2],
+                gLatDemand=physics_data.acc_g[0],
+                gVertDemand=physics_data.acc_g[1],
+                dnRollDemand=0.0,
+                dnPitchDemand=0.0,
+                dnYawDemand=0.0,
+                vLongCar=physics_data.speed_kmh / 3.6,
+                gLongExternalCueing=0.0,
+                gLatExternalCueing=0.0,
+                gVertExternalCueing=0.0,
+                dnRollExternalCueing=0.0,
+                dnPitchExternalCueing=0.0,
+                dnYawExternalCueing=0.0,
+                vLongExternalCueing=0.0,
+                vLatExternalCueing=0.0,
+                vVertExternalCueing=0.0,
+                nRollExternalCueing=0.0,
+                nPitchExternalCueing=0.0,
+                nYawExternalCueing=0.0,
+                xLongExternalCueing=0.0,
+                xLatExternalCueing=0.0,
+                xVertExternalCueing=0.0,
+                aRollExternalCueing=0.0,
+                aPitchExternalCueing=0.0,
+                aYawExternalCueing=0.0,
+                nEngine=physics_data.rpms * (2 * 3.142 / 60),
+                NGear=float(physics_data.gear),
+                rUpshiftCue=0.0,
+                rDownshiftCue=0.0,
+                rEngineCue=0.0,
+                aSlipCue=0.0,
+                nSlipCar=0.0,
+                dnSlipCar=0.0,
+                rSideSlipCue=0.0,
+                rWashoutLong=float(washoutSettings["rWashoutLong"]),
+                rWashoutLat=float(washoutSettings["rWashoutLat"]),
+                rWashoutVert=float(washoutSettings["rWashoutVert"]),
+                rWashoutRoll=float(washoutSettings["rWashoutRoll"]),
+                rWashoutPitch=float(washoutSettings["rWashoutPitch"]),
+                rWashoutYaw=float(washoutSettings["rWashoutYaw"]),
+                fWashoutLong=float(washoutSettings["fWashoutLong"]),
+                fWashoutLat=float(washoutSettings["fWashoutLat"]),
+                fWashoutVert=float(washoutSettings["fWashoutVert"]),
+                fWashoutRoll=float(washoutSettings["fWashoutRoll"]),
+                fWashoutPitch=float(washoutSettings["fWashoutPitch"]),
+                fWashoutYaw=float(washoutSettings["fWashoutYaw"]),
+                zetaWashoutLong=float(washoutSettings["zetaWashoutLong"]),
+                zetaWashoutLat=float(washoutSettings["zetaWashoutLat"]),
+                zetaWashoutVert=float(washoutSettings["zetaWashoutVert"]),
+                zetaWashoutRoll=float(washoutSettings["zetaWashoutRoll"]),
+                zetaWashoutPitch=float(washoutSettings["zetaWashoutPitch"]),
+                zetaWashoutYaw=float(washoutSettings["zetaWashoutYaw"]),
+                xLongSpeedPreposMin=0.0,
+                xLongSpeedPreposMax=0.0,
+                vCarSpeedPreposMin=0.0,
+                vCarSpeedPreposMax=0.0,
+                NMSteer=physics_data.final_ff * float(modelConstants["TorqueMultiplier"])
+            )
+
+            # Pack the buffer into a binary format (struct.pack for 60 floats)
+            udp_packet = struct.pack(f"{len(txbuf)}f", *txbuf)
+
+            # Send UDP packet
+            sock.sendto(udp_packet, (UDP_IP, UDP_TX_PORT))
+
+            # Console output (for debugging)
+            if debug_output:
+                print(
+                    f"Packet sent - Speed: {physics_data.speed_kmh:.1f} km/h, RPM: {physics_data.rpms}, throttle: {physics_data.gas:.1f}, brake: {physics_data.brake:.1f}, Steering Torque: {physics_data.final_ff:.1f}")
+
+            if write_tx_to_csv:
+                packet_id = physics_data.packet_id
+                log_to_csv(txbuf, [packet_id])
