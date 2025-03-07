@@ -3,8 +3,9 @@ import ctypes
 import time
 import socket
 import struct
-from collections import namedtuple
+import configparser
 import pygetwindow as gw
+from collections import namedtuple
 import sys
 import csv
 import os
@@ -13,36 +14,89 @@ import os
 AC_PHYSICS_MEMORY_NAME = "Local\\acpmf_physics"
 AC_GRAPHICS_MEMORY_NAME = "Local\\acpmf_graphics"
 
-# Define UDP target
-UDP_IP = "192.168.1.100"
-UDP_TX_PORT = 20777
-TRANSMIT_TO_SELF = False  # For debugging purposes
-UDP_IP = socket.gethostbyname(socket.gethostname()) if TRANSMIT_TO_SELF else UDP_IP
+DEFAULT_SETTINGS = {
+    'Network': {
+        'UDP_IP': '192.168.1.100',
+        'UDP_TX_PORT': '20777',
+        'TRANSMIT_TO_SELF': 'False'
+    },
+    'Debug': {
+        'debug_output': 'False'
+    },
+    'Logging': {
+        'write_tx_to_csv': 'True',
+        'log_execution_time': 'True',
+        'tx_csv_file': 'telemetry_log.csv'
+    },
+    'Processing': {
+        'read_graphics_telemetry': 'False'
+    },
+    'ModelConstants': {
+        'NSimRequest': '1',
+        'NCueingMode': '1',
+        'BEnableBrakeBooster': '0',
+        'TorqueMultiplier': '1.0'
+    },
+    'WashoutSettings': {
+        'rWashoutLong': '1', 'rWashoutLat': '1', 'rWashoutVert': '1',
+        'rWashoutRoll': '1', 'rWashoutPitch': '1', 'rWashoutYaw': '1',
+        'fWashoutLong': '1', 'fWashoutLat': '2', 'fWashoutVert': '2',
+        'fWashoutRoll': '1.5', 'fWashoutPitch': '1.5', 'fWashoutYaw': '0.5',
+        'zetaWashoutLong': '3', 'zetaWashoutLat': '2', 'zetaWashoutVert': '4',
+        'zetaWashoutRoll': '4', 'zetaWashoutPitch': '3', 'zetaWashoutYaw': '2'
+    }
+}
 
-# Debug console output
-debug_output = False
+CONFIG_FILE = 'config.txt'
 
-# CSV logging settings
-write_tx_to_csv = True
-log_execution_time = True
-tx_csv_file = "telemetry_log.csv"
 
-# Default values for model constants & washout setting
+# Function to create config file with default settings
+def create_default_config():
+    config.read_dict(DEFAULT_SETTINGS)
+    with open(CONFIG_FILE, 'w') as configfile:
+        # noinspection PyTypeChecker
+        config.write(configfile)
+
+
+# Load config if it exists, otherwise create it
+config = configparser.ConfigParser()
+config.optionxform = str  # Preserve original case of keys
+if not os.path.exists(CONFIG_FILE):
+    print(f"{CONFIG_FILE} not found. Creating with default settings.")
+    create_default_config()
+
+config.read(CONFIG_FILE)
+
+# Read network settings
+UDP_IP = config.get('Network', 'UDP_IP')
+UDP_TX_PORT = config.getint('Network', 'UDP_TX_PORT')
+TRANSMIT_TO_SELF = config.getboolean('Network', 'TRANSMIT_TO_SELF')
+
+# Read debug settings
+debug_output = config.getboolean('Debug', 'debug_output')
+
+# Read logging settings
+write_tx_to_csv = config.getboolean('Logging', 'write_tx_to_csv')
+log_execution_time = config.getboolean('Logging', 'log_execution_time')
+tx_csv_file = config.get('Logging', 'tx_csv_file')
+
+# Read processing settings
+read_graphics_telemetry = config.getboolean('Processing', 'read_graphics_telemetry')
+
+# Read model constants
 modelConstants = {
-    "NSimRequest": 1,
-    "NCueingMode": 1,
-    "BEnableBrakeBooster": 0,
-    "TorqueMultiplier": 1.0
+    "NSimRequest": config.getint('ModelConstants', 'NSimRequest'),
+    "NCueingMode": config.getint('ModelConstants', 'NCueingMode'),
+    "BEnableBrakeBooster": config.getint('ModelConstants', 'BEnableBrakeBooster'),
+    "TorqueMultiplier": config.getfloat('ModelConstants', 'TorqueMultiplier')
 }
 
-washoutSettings = {
-    "rWashoutLong": 1, "rWashoutLat": 1, "rWashoutVert": 1,
-    "rWashoutRoll": 1, "rWashoutPitch": 1, "rWashoutYaw": 1,
-    "fWashoutLong": 1, "fWashoutLat": 2, "fWashoutVert": 2,
-    "fWashoutRoll": 1.5, "fWashoutPitch": 1.5, "fWashoutYaw": 0.5,
-    "zetaWashoutLong": 3, "zetaWashoutLat": 2, "zetaWashoutVert": 4,
-    "zetaWashoutRoll": 4, "zetaWashoutPitch": 3, "zetaWashoutYaw": 2
-}
+# Read washout settings
+washoutSettings = {key: float(value) for key, value in config.items('WashoutSettings')}
+
+# Adjust IP if TRANSMIT_TO_SELF is True
+if TRANSMIT_TO_SELF:
+    UDP_IP = socket.gethostbyname(socket.gethostname())
 
 # Define the namedtuple for telemetry data
 TelemetryData = namedtuple('TelemetryData', [
@@ -265,6 +319,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 bHeartbeat = True
 last_packet_id = -1
 last_time = time.time()
+time_taken = 0
 
 # Initialize CSV logger
 csv_logger = None
@@ -276,11 +331,11 @@ while True:
     retry_logged = False
     while not is_game_running():
         if not retry_logged:
-            print("Game not detected. Waiting...\n")
+            print("Assetto Corsa not detected. Waiting...\n")
             retry_logged = True
         time.sleep(3)
 
-    print("Game detected! Allowing time for game start...")
+    print("Assetto Corsa detected! Allowing time for game start...")
     time.sleep(10)  # Wait for the game to fully load
 
     # Open shared memory
@@ -297,17 +352,24 @@ while True:
 
         # Read physics data from shared memory
         physics_file_handle.seek(0)
-        raw_data = physics_file_handle.read(PHYSICS_DATA_SIZE)
+        try:
+            raw_data = physics_file_handle.read(PHYSICS_DATA_SIZE)
+        except OSError:
+            continue  # Skip this iteration if shared memory is temporarily unavailable
         physics_data = PhysicsData.from_buffer_copy(raw_data)
 
         # Read graphics data from shared memory
-        graphics_file_handle.seek(0)
-        raw_data = graphics_file_handle.read(GRAPHICS_DATA_SIZE)
-        graphics_data = GraphicsData.from_buffer_copy(raw_data)
+        if read_graphics_telemetry:
+            graphics_file_handle.seek(0)
+            try:
+                raw_data = graphics_file_handle.read(GRAPHICS_DATA_SIZE)
+            except OSError:
+                continue  # Skip this iteration if shared memory is temporarily unavailable
+            graphics_data = GraphicsData.from_buffer_copy(raw_data)
 
         # If new data is available, assemble and send it
         if physics_data.packet_id != last_packet_id:
-            update_console_state("●")
+            update_console_state("●")  # Activity light on
             last_packet_id = physics_data.packet_id
             bHeartbeat = not bHeartbeat  # Beat heart
 
@@ -395,4 +457,4 @@ while True:
                     csv_logger.log(txbuf, [packet_id])
 
         else:
-            update_console_state("○")
+            update_console_state("○")  # Activity light off
