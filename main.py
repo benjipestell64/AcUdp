@@ -145,8 +145,8 @@ def open_shared_memory(name, size, retries=3, delay=2):
 
 
 def update_console_state(state):
-    # Move cursor back to the start of the line and print the status
-    sys.stdout.write(f"\rStatus: [{state}]")
+    # Move cursor back to the start of the line and print the activity
+    sys.stdout.write(f"\rActivity: [{state}]")
     sys.stdout.flush()
 
 
@@ -331,7 +331,7 @@ while True:
     retry_logged = False
     while not is_game_running():
         if not retry_logged:
-            print("Assetto Corsa not detected. Waiting...\n")
+            print("\nAssetto Corsa not detected. Waiting...\n")
             retry_logged = True
         time.sleep(3)
 
