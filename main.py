@@ -24,8 +24,8 @@ DEFAULT_SETTINGS = {
         'debug_output': 'False'
     },
     'Logging': {
-        'write_tx_to_csv': 'True',
-        'log_execution_time': 'True',
+        'write_tx_to_csv': 'False',
+        'log_execution_time': 'False',
         'tx_csv_file': 'telemetry_log.csv'
     },
     'Processing': {
@@ -127,7 +127,7 @@ TelemetryData = namedtuple('TelemetryData', [
 def is_game_running():
     windows = gw.getAllTitles()
     for title in windows:
-        if "assetto corsa" in title.lower() and "launcher" not in title.lower():
+        if title == "Assetto Corsa":
             return True
     return False
 
@@ -376,8 +376,8 @@ while True:
             # Construct tx buffer using namedTuple (TwinCAT format)
             txbuf = TelemetryData(
                 Heartbeat=float(bHeartbeat),
-                NSimRequest=float(modelConstants["NSimRequest"]),
-                NCueingMode=float(modelConstants["NCueingMode"]),
+                NSimRequest=int(modelConstants["NSimRequest"]),
+                NCueingMode=int(modelConstants["NCueingMode"]),
                 BEnableBrakeBooster=float(modelConstants["BEnableBrakeBooster"]),
                 gLongDemand=physics_data.acc_g[2],
                 gLatDemand=physics_data.acc_g[0],
@@ -438,8 +438,16 @@ while True:
                 NMSteer=physics_data.final_ff * float(modelConstants["TorqueMultiplier"])
             )
 
-            # Pack the buffer into a binary format (struct.pack for 60 floats)
-            udp_packet = struct.pack(f"{len(txbuf)}f", *txbuf)
+            # Pack the buffer into the pre-defined binary format
+            udp_packet = struct.pack(
+                "BbbB" + "f" * 56 + "h",  # Format string: 4 bytes for USINT/SINT + 56 floats + 1 short
+                int(txbuf.Heartbeat),  # USINT (8-bit unsigned)
+                int(txbuf.NSimRequest),  # SINT (8-bit signed)
+                int(txbuf.NCueingMode),  # SINT (8-bit signed)
+                int(txbuf.BEnableBrakeBooster),  # USINT (8-bit unsigned)
+                *txbuf[4:-1],  # 56 floats as they are
+                int(txbuf.NMSteer)  # INT (16-bit signed)
+            )
 
             # Send UDP packet
             sock.sendto(udp_packet, (UDP_IP, UDP_TX_PORT))
