@@ -440,7 +440,7 @@ while True:
 
             # Pack the buffer into the pre-defined binary format
             udp_packet = struct.pack(
-                "<BbbB" + "f" * 56 + "h",  # Format string: little-endian (<), 4 bytes for USINT/SINT + 56 floats + 1 short
+                ">BbbB" + "f" * 56 + "h",  # Format string: big-endian (>), 4 bytes for USINT/SINT + 56 floats + 1 short
                 int(txbuf.Heartbeat),  # USINT (8-bit unsigned)
                 int(txbuf.NSimRequest),  # SINT (8-bit signed)
                 int(txbuf.NCueingMode),  # SINT (8-bit signed)
