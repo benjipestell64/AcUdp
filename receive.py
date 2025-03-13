@@ -3,7 +3,7 @@ import struct
 
 # UDP server setup
 UDP_IP = "0.0.0.0"
-UDP_PORT = 20777
+UDP_PORT = 10000
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((UDP_IP, UDP_PORT))
@@ -12,7 +12,7 @@ print(f"Listening for UDP packets on {UDP_IP}:{UDP_PORT}...\n")
 
 # Define the correct packet format:
 packet_format = (
-        "BBBB"  # 4 bytes: BHeartbeat, NSimRequest, NCueingMode, BEnableBrakeBooster
+        ">BBBB"  # 4 bytes: BHeartbeat, NSimRequest, NCueingMode, BEnableBrakeBooster
         + "f" * 56  # 56 floats (REAL values)
         + "h"  # 1 INT (16-bit) for NMSteer
 )
