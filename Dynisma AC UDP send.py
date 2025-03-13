@@ -8,6 +8,7 @@ import pygetwindow as gw
 from collections import namedtuple
 import csv
 import os
+import sys
 import tkinter as tk
 from tkinter import ttk
 import threading
@@ -523,10 +524,13 @@ def waiting_for_launch(seconds_remaining=None):
     speed_label.config(text="Speed: N/A")
     gear_label.config(text="Gear: N/A")
 
+
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
+    # noinspection PyBroadException
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
+        # noinspection PyProtectedMember
         base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.abspath(".")
