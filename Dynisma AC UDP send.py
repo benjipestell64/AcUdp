@@ -12,6 +12,8 @@ import tkinter as tk
 from tkinter import ttk
 import threading
 
+# Compile with: pyinstaller --onefile --windowed --add-data "dynisma.ico;." --path .\.venv\Lib\site-packages\ --icon .\dynisma.ico "Dynisma AC UDP send.py"
+
 # Shared memory name for Assetto Corsa physics & graphics data
 AC_PHYSICS_MEMORY_NAME = "Local\\acpmf_physics"
 AC_GRAPHICS_MEMORY_NAME = "Local\\acpmf_graphics"
@@ -338,14 +340,17 @@ def main_loop():
 
     while running:
 
+        game_was_running = True
         while not is_game_running():
             searching_for_assetto()
             time.sleep(1)
+            game_was_running = False
 
-        # Assetto Corsa now launching
-        for i in range(launch_wait_time):
-            waiting_for_launch(launch_wait_time - i)
-            time.sleep(1)
+        if not game_was_running:
+            # Assetto Corsa now launching
+            for i in range(launch_wait_time):
+                waiting_for_launch(launch_wait_time - i)
+                time.sleep(1)
         running = True
 
         while is_game_running() and running:
@@ -518,10 +523,20 @@ def waiting_for_launch(seconds_remaining=None):
     speed_label.config(text="Speed: N/A")
     gear_label.config(text="Gear: N/A")
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 
 root = tk.Tk()
 root.title("Assetto Corsa UDP Sender")
-root.geometry("200x150")
+root.iconbitmap(resource_path("dynisma.ico"))
+root.geometry("200x120")
 
 frame = ttk.Frame(root, padding=10)
 # noinspection PyTypeChecker
