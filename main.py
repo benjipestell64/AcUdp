@@ -6,7 +6,6 @@ import struct
 import configparser
 import pygetwindow as gw
 from collections import namedtuple
-import sys
 import csv
 import os
 import tkinter as tk
@@ -32,7 +31,8 @@ DEFAULT_SETTINGS = {
         'tx_csv_file': 'telemetry_log.csv'
     },
     'Processing': {
-        'read_graphics_telemetry': 'False'
+        'read_graphics_telemetry': 'False',
+        'launch_wait_time': '10'
     },
     'ModelConstants': {
         'NSimRequest': '1',
@@ -85,6 +85,7 @@ tx_csv_file = config.get('Logging', 'tx_csv_file')
 
 # Read processing settings
 read_graphics_telemetry = config.getboolean('Processing', 'read_graphics_telemetry')
+launch_wait_time = config.getint('Processing', 'launch_wait_time')
 
 # Read model constants
 modelConstants = {
@@ -323,7 +324,7 @@ if write_tx_to_csv:
     csv_logger = CSVLogger(tx_csv_file, TelemetryData._fields, log_execution_time)
 
 
-def send_udp_data():
+def main_loop():
     # noinspection PyGlobalUndefined
     global running, txbuf
 
@@ -341,7 +342,11 @@ def send_udp_data():
             searching_for_assetto()
             time.sleep(1)
 
-        waiting_for_launch()
+        # Assetto Corsa now launching
+        for i in range(launch_wait_time):
+            waiting_for_launch(launch_wait_time - i)
+            time.sleep(1)
+        running = True
 
         while is_game_running() and running:
             if log_execution_time:
@@ -349,11 +354,8 @@ def send_udp_data():
                 time_taken = current_time - last_time
                 last_time = current_time
 
-            # Open shared memory
-            physics_file_handle = open_shared_memory(AC_PHYSICS_MEMORY_NAME, PHYSICS_DATA_SIZE)
-            graphics_file_handle = open_shared_memory(AC_GRAPHICS_MEMORY_NAME, GRAPHICS_DATA_SIZE)
-
             # Read physics data from shared memory
+            physics_file_handle = open_shared_memory(AC_PHYSICS_MEMORY_NAME, PHYSICS_DATA_SIZE)
             physics_file_handle.seek(0)
             try:
                 raw_data = physics_file_handle.read(PHYSICS_DATA_SIZE)
@@ -361,14 +363,15 @@ def send_udp_data():
                 continue  # Skip this iteration if shared memory is temporarily unavailable
             physics_data = PhysicsData.from_buffer_copy(raw_data)
 
-            # Read graphics data from shared memory
-            if read_graphics_telemetry:
-                graphics_file_handle.seek(0)
-                try:
-                    raw_data = graphics_file_handle.read(GRAPHICS_DATA_SIZE)
-                except OSError:
-                    continue  # Skip this iteration if shared memory is temporarily unavailable
-                graphics_data = GraphicsData.from_buffer_copy(raw_data)
+            # # Read graphics data from shared memory
+            # if read_graphics_telemetry:
+            #     graphics_file_handle = open_shared_memory(AC_GRAPHICS_MEMORY_NAME, GRAPHICS_DATA_SIZE)
+            #     graphics_file_handle.seek(0)
+            #     try:
+            #         raw_data = graphics_file_handle.read(GRAPHICS_DATA_SIZE)
+            #     except OSError:
+            #         continue  # Skip this iteration if shared memory is temporarily unavailable
+            #     graphics_data = GraphicsData.from_buffer_copy(raw_data)
 
             # If new data is available, assemble and send it
             if physics_data.packet_id != last_packet_id:
@@ -453,7 +456,7 @@ def send_udp_data():
                     int(txbuf.NMSteer)  # INT (16-bit signed)
                 )
 
-                hex_data = ' '.join(f'{byte:02X}' for byte in udp_packet)
+                # hex_data = ' '.join(f'{byte:02X}' for byte in udp_packet)
 
                 # Send UDP packet
                 sock.sendto(udp_packet, (UDP_IP, UDP_TX_PORT))
@@ -480,21 +483,25 @@ def send_udp_data():
                 update_console_state("○")
 
 
+# noinspection PyGlobalUndefined
 def start_transmission():
     global running
     running = True
-    thread = threading.Thread(target=send_udp_data, daemon=True)
+    thread = threading.Thread(target=main_loop, daemon=True)
     thread.start()
 
 
+# noinspection PyGlobalUndefined
 def stop_transmission():
     global running
     running = False
     status_label.config(text="State: Stopped")
     speed_label.config(text="Speed: N/A")
     gear_label.config(text="Gear: N/A")
+    update_console_state("○")
 
 
+# noinspection PyGlobalUndefined
 def searching_for_assetto():
     global running
     running = False
@@ -503,8 +510,11 @@ def searching_for_assetto():
     gear_label.config(text="Gear: N/A")
 
 
-def waiting_for_launch():
-    status_label.config(text="State: Wait")
+def waiting_for_launch(seconds_remaining=None):
+    if seconds_remaining:
+        status_label.config(text=f"State: Wait ({seconds_remaining}s)")
+    else:
+        status_label.config(text="State: Wait")
     speed_label.config(text="Speed: N/A")
     gear_label.config(text="Gear: N/A")
 
@@ -524,15 +534,15 @@ stop_button = ttk.Button(frame, text="Stop", command=stop_transmission)
 stop_button.grid(row=0, column=2, columnspan=2, padx=5, pady=5)
 
 status_label = ttk.Label(frame, text="State: Stopped")
-status_label.grid(row=1, column=0, columnspan=2, pady=5)
+status_label.grid(row=1, column=0, columnspan=2, pady=5, sticky="w")
 
 activity_light = ttk.Label(frame, text="Activity: ○")
-activity_light.grid(row=2, column=0, columnspan=2, pady=5)
+activity_light.grid(row=2, column=0, columnspan=2, pady=5, sticky="w")
 
 speed_label = ttk.Label(frame, text="Speed: N/A")
-speed_label.grid(row=1, column=3, columnspan=2, pady=5)
+speed_label.grid(row=1, column=3, columnspan=2, pady=5, sticky="w")
 
 gear_label = ttk.Label(frame, text="Gear: N/A")
-gear_label.grid(row=2, column=3, columnspan=2, pady=5)
+gear_label.grid(row=2, column=3, columnspan=2, pady=5, sticky="w")
 
 root.mainloop()
