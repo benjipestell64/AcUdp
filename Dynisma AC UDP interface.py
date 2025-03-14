@@ -157,9 +157,9 @@ def set_activity_light(active=False):
     # sys.stdout.write(f"\rActivity: [{state}]")
     # sys.stdout.flush()
     if active:
-        state = "█"
+        state = "◆"
     else:
-        state = "▒"
+        state = "◇"
     activity_light.config(text="Activity: " + state)
 
 
@@ -586,8 +586,9 @@ stop_button.grid(row=0, column=2, columnspan=2, padx=5, pady=5)
 status_label = ttk.Label(frame, text="State: Stopped")
 status_label.grid(row=1, column=0, columnspan=2, pady=5, sticky="w")
 
-activity_light = ttk.Label(frame, text="Activity: ○")
+activity_light = ttk.Label(frame, text="")
 activity_light.grid(row=2, column=0, columnspan=2, pady=5, sticky="w")
+set_activity_light()
 
 speed_label = ttk.Label(frame, text="Speed: N/A")
 speed_label.grid(row=1, column=3, columnspan=2, pady=5, sticky="w")
