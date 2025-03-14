@@ -165,9 +165,17 @@ def open_shared_memory(name, size, retries=3, delay=2):
     exit(1)
 
 
-def set_activity_light(active=False):
-    state = "◆" if active else "◇"
-    activity_light.config(text="Activity: " + state)
+ACTIVE_LIGHT = "◆"
+INACTIVE_LIGHT = "◇"
+
+
+def set_tx_activity_light(active=False):
+    state = ACTIVE_LIGHT if active else INACTIVE_LIGHT
+    tx_activity_light.config(text="Activity: " + state)
+
+def set_rx_activity_light(active=False):
+    state = ACTIVE_LIGHT if active else INACTIVE_LIGHT
+    rx_activity_light.config(text="Activity: " + state)
 
 
 class CSVLogger:
@@ -530,7 +538,7 @@ def transmit_loop():
 
             # If new data is available, assemble and send it
             if physics_data.packet_id != last_packet_id:
-                set_activity_light(True)  # Activity light on
+                set_tx_activity_light(True)  # Activity light on
                 last_packet_id = physics_data.packet_id
                 heartbeat = not heartbeat  # Beat heart
 
@@ -617,7 +625,7 @@ def transmit_loop():
 
                 # Update UI
                 status_label.config(text="State: Run")
-                speed_label.config(text=f"Speed: {physics_data.speed_kmh:.0f} km/h")
+                speed_label.config(text=f"Speed: {int(physics_data.speed_kmh):03d} km/h")
                 gear = round(txbuf.NGear)
                 if gear == -1:
                     gear = "R"
@@ -639,7 +647,7 @@ def transmit_loop():
 
             else:
                 # No new data
-                set_activity_light(False)
+                set_tx_activity_light(False)
 
 
 # noinspection PyGlobalUndefined
@@ -658,12 +666,13 @@ def receive_loop():
         data, addr = sock.recvfrom(RECEIVE_PACKET_SIZE)
         if len(data) == RECEIVE_PACKET_SIZE:
             unpacked_data = struct.unpack(RECEIVE_PACKET_FORMAT, data)
+
             print("Received Data:", unpacked_data)
             # Update the UI or process the data as needed
 
 
 # noinspection PyGlobalUndefined
-def start_transmission():
+def start():
     """
     Start the transmission of telemetry data.
 
@@ -680,7 +689,7 @@ def start_transmission():
 
 
 # noinspection PyGlobalUndefined
-def stop_transmission():
+def stop():
     """
     Stop the transmission of telemetry data.
 
@@ -690,10 +699,10 @@ def stop_transmission():
     """
     global running
     running = False
-    status_label.config(text="State: Stopped")
+    status_label.config(text="State: Stop")
     speed_label.config(text="Speed: N/A")
     gear_label.config(text="Gear: N/A")
-    set_activity_light(False)
+    set_tx_activity_light(False)
 
 
 # noinspection PyGlobalUndefined
@@ -756,29 +765,48 @@ def resource_path(relative_path):
 root = tk.Tk()
 root.title("Assetto Corsa UDP Interface")
 root.iconbitmap(resource_path("dynisma.ico"))
-root.geometry("200x120")
+root.geometry("290x180")
 
 frame = ttk.Frame(root, padding=10)
 # noinspection PyTypeChecker
 frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-start_button = ttk.Button(frame, text="Start", command=start_transmission)
-start_button.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
+transmit_label = ttk.Label(frame, text="Target: " + UDP_IP + " : " + str(UDP_PORT))
+transmit_label.grid(row=0, column=0, columnspan=8, pady=5)
 
-stop_button = ttk.Button(frame, text="Stop", command=stop_transmission)
-stop_button.grid(row=0, column=2, columnspan=2, padx=5, pady=5)
+# Transmit
+transmit_label = ttk.Label(frame, text="Transmit")
+transmit_label.grid(row=1, column=0, columnspan=4, pady=5)
 
-status_label = ttk.Label(frame, text="State: Stopped")
-status_label.grid(row=1, column=0, columnspan=2, pady=5, sticky="w")
+tx_activity_light = ttk.Label(frame, text="")
+tx_activity_light.grid(row=2, column=0, columnspan=1, padx=5, pady=5, sticky="w")
+set_tx_activity_light()
 
-activity_light = ttk.Label(frame, text="")
-activity_light.grid(row=2, column=0, columnspan=2, pady=5, sticky="w")
-set_activity_light()
+status_label = ttk.Label(frame, text="State: Stop")
+status_label.grid(row=3, column=0, columnspan=1, padx=5, pady=5, sticky="w")
 
 speed_label = ttk.Label(frame, text="Speed: N/A")
-speed_label.grid(row=1, column=3, columnspan=2, pady=5, sticky="w")
+speed_label.grid(row=2, column=2, columnspan=1, padx=5, pady=5, sticky="w")
 
 gear_label = ttk.Label(frame, text="Gear: N/A")
-gear_label.grid(row=2, column=3, columnspan=2, pady=5, sticky="w")
+gear_label.grid(row=3, column=2, columnspan=1, padx=5, pady=5, sticky="w")
+
+# Receive
+transmit_label = ttk.Label(frame, text="Receive")
+transmit_label.grid(row=1, column=4, columnspan=4, pady=5)
+
+rx_activity_light = ttk.Label(frame, text="")
+rx_activity_light.grid(row=2, column=4, columnspan=1, padx=5, pady=5, sticky="w")
+set_rx_activity_light()
+
+rx_packet_id_label = ttk.Label(frame, text="Packet ID: N/A")
+rx_packet_id_label.grid(row=3, column=4, columnspan=1, padx=5, pady=5, sticky="w")
+
+# Buttons
+start_button = ttk.Button(frame, text="Start", command=start)
+start_button.grid(row=4, column=0, columnspan=4, padx=5, pady=5)
+
+stop_button = ttk.Button(frame, text="Stop", command=stop)
+stop_button.grid(row=4, column=4, columnspan=4, padx=5, pady=5)
 
 root.mainloop()
