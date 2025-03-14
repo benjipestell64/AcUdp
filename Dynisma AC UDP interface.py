@@ -90,6 +90,7 @@ tx_csv_file = config.get('Logging', 'tx_csv_file')
 read_graphics_telemetry = config.getboolean('Processing', 'read_graphics_telemetry')
 launch_wait_time = config.getint('Processing', 'launch_wait_time')
 
+# Read model constants
 modelConstants = {key: (int(value) if value.isdigit() else float(value)) for key, value in config.items('ModelConstants')}
 
 # Read washout settings
@@ -135,33 +136,33 @@ def is_ac_running():
 
 
 def open_shared_memory(name, size, retries=3, delay=2):
-        """
-        Open a shared memory segment.
+    """
+    Open a shared memory segment.
 
-        This function attempts to open a shared memory segment with the given name and size.
-        If the shared memory segment is not found, it will retry a specified number of times
-        with a delay between each attempt.
+    This function attempts to open a shared memory segment with the given name and size.
+    If the shared memory segment is not found, it will retry a specified number of times
+    with a delay between each attempt.
 
-        Args:
-            name (str): The name of the shared memory segment.
-            size (int): The size of the shared memory segment.
-            retries (int, optional): The number of times to retry if the shared memory segment is not found. Defaults to 3.
-            delay (int, optional): The delay in seconds between each retry. Defaults to 2.
+    Args:
+        name (str): The name of the shared memory segment.
+        size (int): The size of the shared memory segment.
+        retries (int, optional): The number of times to retry if the shared memory segment is not found. Defaults to 3.
+        delay (int, optional): The delay in seconds between each retry. Defaults to 2.
 
-        Returns:
-            mmap.mmap: The opened shared memory segment.
+    Returns:
+        mmap.mmap: The opened shared memory segment.
 
-        Raises:
-            SystemExit: If the shared memory segment is not found after the specified number of retries.
-        """
-        for attempt in range(retries):
-            try:
-                return mmap.mmap(-1, size, name, access=mmap.ACCESS_READ)
-            except FileNotFoundError:
-                print(f"Attempt {attempt + 1}/{retries}: Shared memory '{name}' not found. Retrying in {delay}s...")
-                time.sleep(delay)
-        print(f"Shared memory '{name}' not found. Exiting.")
-        exit(1)
+    Raises:
+        SystemExit: If the shared memory segment is not found after the specified number of retries.
+    """
+    for attempt in range(retries):
+        try:
+            return mmap.mmap(-1, size, name, access=mmap.ACCESS_READ)
+        except FileNotFoundError:
+            print(f"Attempt {attempt + 1}/{retries}: Shared memory '{name}' not found. Retrying in {delay}s...")
+            time.sleep(delay)
+    print(f"Shared memory '{name}' not found. Exiting.")
+    exit(1)
 
 
 def set_activity_light(active=False):
@@ -641,6 +642,7 @@ def transmit_loop():
                 set_activity_light(False)
 
 
+# noinspection PyGlobalUndefined
 def receive_loop():
     """Thread to listen for incoming UDP packets."""
     global running
