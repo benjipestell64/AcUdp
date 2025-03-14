@@ -475,6 +475,11 @@ def transmit_loop():
                 # Update UI
                 status_label.config(text="State: Run")
                 speed_label.config(text=f"Speed: {physics_data.speed_kmh:.0f} km/h")
+                gear = round(txbuf.NGear)
+                if gear == -1:
+                    gear = "R"
+                elif gear == 0:
+                    gear = "N"
                 gear_label.config(text=f"Gear: {txbuf.NGear:.0f}")
 
                 # Console output (for debugging)
