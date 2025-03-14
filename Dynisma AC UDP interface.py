@@ -13,7 +13,7 @@ import tkinter as tk
 from tkinter import ttk
 import threading
 
-# Compile with: pyinstaller --onefile --windowed --add-data "dynisma.ico;." --path .\.venv\Lib\site-packages\ --icon .\dynisma.ico "Dynisma AC UDP send.py"
+# Compile with: pyinstaller --onefile --windowed --add-data "dynisma.ico;." --path .\.venv\Lib\site-packages\ --icon .\dynisma.ico "Dynisma AC UDP interface.py"
 
 # Shared memory name for Assetto Corsa physics & graphics data
 AC_PHYSICS_MEMORY_NAME = "Local\\acpmf_physics"
@@ -22,7 +22,7 @@ AC_GRAPHICS_MEMORY_NAME = "Local\\acpmf_graphics"
 DEFAULT_SETTINGS = {
     'Network': {
         'UDP_IP': '192.168.1.100',
-        'UDP_TX_PORT': '20777',
+        'UDP_PORT': '20777',
         'TRANSMIT_TO_SELF': 'False'
     },
     'Debug': {
@@ -75,7 +75,7 @@ config.read(CONFIG_FILE)
 
 # Read network settings
 UDP_IP = config.get('Network', 'UDP_IP')
-UDP_TX_PORT = config.getint('Network', 'UDP_TX_PORT')
+UDP_PORT = config.getint('Network', 'UDP_PORT')
 TRANSMIT_TO_SELF = config.getboolean('Network', 'TRANSMIT_TO_SELF')
 
 # Read debug settings
@@ -128,6 +128,11 @@ TelemetryData = namedtuple('TelemetryData', [
     "vCarSpeedPreposMin", "vCarSpeedPreposMax",
     "NMSteer"
 ])
+
+# UDP packet structure
+RECEIVE_PACKET_FORMAT = '<2i28f'  # 2 DINT (int32), 28 REAL (float32)
+RECEIVE_PACKET_SIZE = struct.calcsize(RECEIVE_PACKET_FORMAT)
+TRANSMIT_PACKET_FORMAT = ">BbbB" + "f" * 56 + "h"
 
 
 # Check if the game window is open
@@ -327,7 +332,7 @@ if write_tx_to_csv:
     csv_logger = CSVLogger(tx_csv_file, TelemetryData._fields, log_execution_time)
 
 
-def main_loop():
+def transmit_loop():
     # noinspection PyGlobalUndefined
     global running, txbuf
 
@@ -452,7 +457,7 @@ def main_loop():
 
                 # Pack the buffer into the pre-defined binary format
                 udp_packet = struct.pack(
-                    ">BbbB" + "f" * 56 + "h",
+                    TRANSMIT_PACKET_FORMAT,
                     # Format string: big-endian (>), 4 bytes for USINT/SINT + 56 floats + 1 short
                     int(txbuf.Heartbeat),  # USINT (8-bit unsigned)
                     int(txbuf.NSimRequest),  # SINT (8-bit signed)
@@ -460,12 +465,12 @@ def main_loop():
                     int(txbuf.BEnableBrakeBooster),  # USINT (8-bit unsigned)
                     *txbuf[4:-1],  # 56 floats as they are
                     int(txbuf.NMSteer)  # INT (16-bit signed)
-                )
+                 )
 
                 # hex_data = ' '.join(f'{byte:02X}' for byte in udp_packet)
 
                 # Send UDP packet
-                sock.sendto(udp_packet, (UDP_IP, UDP_TX_PORT))
+                sock.sendto(udp_packet, (UDP_IP, UDP_PORT))
 
                 # Update UI
                 status_label.config(text="State: Run")
@@ -489,12 +494,33 @@ def main_loop():
                 update_console_state("○")
 
 
+def receive_loop():
+    """Thread to listen for incoming UDP packets."""
+    global running
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.bind((UDP_IP, UDP_PORT))
+        socket_bound = True
+    except OSError:
+        print(f"Error: Receive loop unable to bind to {UDP_IP}:{UDP_PORT}.")
+        socket_bound = False
+
+    while running and socket_bound:
+        data, addr = sock.recvfrom(RECEIVE_PACKET_SIZE)
+        if len(data) == RECEIVE_PACKET_SIZE:
+            unpacked_data = struct.unpack(RECEIVE_PACKET_FORMAT, data)
+            print("Received Data:", unpacked_data)
+            # Update the UI or process the data as needed
+
+
 # noinspection PyGlobalUndefined
 def start_transmission():
     global running
     running = True
-    thread = threading.Thread(target=main_loop, daemon=True)
-    thread.start()
+    transmit_thread = threading.Thread(target=transmit_loop, daemon=True)
+    transmit_thread.start()
+    receive_thread = threading.Thread(target=receive_loop, daemon=True)
+    receive_thread.start()
 
 
 # noinspection PyGlobalUndefined
@@ -538,7 +564,7 @@ def resource_path(relative_path):
 
 
 root = tk.Tk()
-root.title("Assetto Corsa UDP Sender")
+root.title("Assetto Corsa UDP Interface")
 root.iconbitmap(resource_path("dynisma.ico"))
 root.geometry("200x120")
 
