@@ -130,9 +130,9 @@ TelemetryData = namedtuple('TelemetryData', [
 ])
 
 # UDP packet structure
-RECEIVE_PACKET_FORMAT = '<2i28f'  # 2 DINT (int32), 28 REAL (float32)
+RECEIVE_PACKET_FORMAT = "<"+ "i" * 2 + "f" * 28  # Little endian, 2 DINT (int32), 28 REAL (float32)
 RECEIVE_PACKET_SIZE = struct.calcsize(RECEIVE_PACKET_FORMAT)
-TRANSMIT_PACKET_FORMAT = ">BbbB" + "f" * 56 + "h"
+TRANSMIT_PACKET_FORMAT = ">BbbB" + "f" * 56 + "h"  # Big endian, 1 byte, 3 signed bytes, 56 floats, 1 signed short
 
 
 # Check if the game window is open
