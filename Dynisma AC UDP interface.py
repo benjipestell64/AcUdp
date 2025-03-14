@@ -90,13 +90,7 @@ tx_csv_file = config.get('Logging', 'tx_csv_file')
 read_graphics_telemetry = config.getboolean('Processing', 'read_graphics_telemetry')
 launch_wait_time = config.getint('Processing', 'launch_wait_time')
 
-# Read model constants
-modelConstants = {
-    "NSimRequest": config.getint('ModelConstants', 'NSimRequest'),
-    "NCueingMode": config.getint('ModelConstants', 'NCueingMode'),
-    "BEnableBrakeBooster": config.getint('ModelConstants', 'BEnableBrakeBooster'),
-    "TorqueMultiplier": config.getfloat('ModelConstants', 'TorqueMultiplier')
-}
+modelConstants = {key: (int(value) if value.isdigit() else float(value)) for key, value in config.items('ModelConstants')}
 
 # Read washout settings
 washoutSettings = {key: float(value) for key, value in config.items('WashoutSettings')}
@@ -135,36 +129,55 @@ RECEIVE_PACKET_SIZE = struct.calcsize(RECEIVE_PACKET_FORMAT)
 TRANSMIT_PACKET_FORMAT = ">BbbB" + "f" * 56 + "h"  # Big endian, 1 USINT, 2 SINT, 1 USINT, 56 REAL, 1 short INT
 
 
-# Check if the game window is open
-def is_game_running():
+# Check if the ac window is open
+def is_ac_running():
     return any(title == "Assetto Corsa" for title in gw.getAllTitles())
 
 
-# Open shared memory
 def open_shared_memory(name, size, retries=3, delay=2):
-    for attempt in range(retries):
-        try:
-            return mmap.mmap(-1, size, name, access=mmap.ACCESS_READ)
-        except FileNotFoundError:
-            print(f"Attempt {attempt + 1}/{retries}: Shared memory '{name}' not found. Retrying in {delay}s...")
-            time.sleep(delay)
-    print(f"Shared memory '{name}' not found. Exiting.")
-    exit(1)
+        """
+        Open a shared memory segment.
+
+        This function attempts to open a shared memory segment with the given name and size.
+        If the shared memory segment is not found, it will retry a specified number of times
+        with a delay between each attempt.
+
+        Args:
+            name (str): The name of the shared memory segment.
+            size (int): The size of the shared memory segment.
+            retries (int, optional): The number of times to retry if the shared memory segment is not found. Defaults to 3.
+            delay (int, optional): The delay in seconds between each retry. Defaults to 2.
+
+        Returns:
+            mmap.mmap: The opened shared memory segment.
+
+        Raises:
+            SystemExit: If the shared memory segment is not found after the specified number of retries.
+        """
+        for attempt in range(retries):
+            try:
+                return mmap.mmap(-1, size, name, access=mmap.ACCESS_READ)
+            except FileNotFoundError:
+                print(f"Attempt {attempt + 1}/{retries}: Shared memory '{name}' not found. Retrying in {delay}s...")
+                time.sleep(delay)
+        print(f"Shared memory '{name}' not found. Exiting.")
+        exit(1)
 
 
 def set_activity_light(active=False):
-    # Move cursor back to the start of the line and print the activity
-    # sys.stdout.write(f"\rActivity: [{state}]")
-    # sys.stdout.flush()
-    if active:
-        state = "◆"
-    else:
-        state = "◇"
+    state = "◆" if active else "◇"
     activity_light.config(text="Activity: " + state)
 
 
-# CSVLogger class to handle CSV operations
 class CSVLogger:
+    """
+        A class to handle CSV logging operations.
+
+        Attributes:
+            file_path (str): The path to the CSV file.
+            log_execution_time (bool): Whether to log execution time.
+    """
+
     def __init__(self, file_path, headers, bool_log_execution_time=False):
         self.file_path = file_path
         self.log_execution_time = bool_log_execution_time
@@ -193,9 +206,93 @@ class CSVLogger:
             csv_writer.writerow(data)
 
 
+# Initialize CSV logger
+csv_logger = None
+if write_tx_to_csv:
+    # noinspection PyRedeclaration
+    csv_logger = CSVLogger(tx_csv_file, TelemetryData._fields, log_execution_time)
+
+
 # Define the structure of the physics telemetry data
-# noinspection PyTypeChecker
+# noinspection PyTypeChecker,PyUnresolvedReferences
 class PhysicsData(ctypes.Structure):
+    """
+    A ctypes Structure representing the physics telemetry data from Assetto Corsa.
+
+    Attributes:
+        packet_id (int): The unique identifier for the data packet.
+        gas (float): The amount of gas pedal input.
+        brake (float): The amount of brake pedal input.
+        fuel (float): The amount of fuel remaining.
+        gear (int): The current gear.
+        rpms (int): The engine RPM.
+        steer_angle (float): The steering angle.
+        speed_kmh (float): The speed in kilometers per hour.
+        velocity (float * 3): The velocity vector.
+        acc_g (float * 3): The acceleration vector in Gs.
+        wheel_slip (float * 4): The slip ratio for each wheel.
+        wheel_load (float * 4): The load on each wheel.
+        wheels_pressure (float * 4): The pressure in each tire.
+        wheel_angular_speed (float * 4): The angular speed of each wheel.
+        tyre_wear (float * 4): The wear level of each tire.
+        tyre_dirty_level (float * 4): The dirt level on each tire.
+        tyre_core_temperature (float * 4): The core temperature of each tire.
+        camber_rad (float * 4): The camber angle in radians for each wheel.
+        suspension_travel (float * 4): The suspension travel for each wheel.
+        drs (float): The DRS (Drag Reduction System) status.
+        tc (float): The traction control status.
+        heading (float): The heading angle.
+        pitch (float): The pitch angle.
+        roll (float): The roll angle.
+        cg_height (float): The height of the center of gravity.
+        car_damage (float * 5): The damage levels for various parts of the car.
+        number_of_tyres_out (int): The number of tires out of track limits.
+        pit_limiter_on (int): Whether the pit limiter is on.
+        abs (float): The ABS (Anti-lock Braking System) status.
+        kers_charge (float): The KERS (Kinetic Energy Recovery System) charge level.
+        kers_input (float): The KERS input level.
+        auto_shifter_on (int): Whether the auto shifter is on.
+        ride_height (float * 2): The ride height for the front and rear.
+        turbo_boost (float): The turbo boost level.
+        ballast (float): The ballast weight.
+        air_density (float): The air density.
+        air_temp (float): The air temperature.
+        road_temp (float): The road temperature.
+        local_angular_vel (float * 3): The local angular velocity vector.
+        final_ff (float): The final force feedback value.
+        performance_meter (float): The performance meter value.
+        engine_brake (int): The engine brake level.
+        ers_recovery_level (int): The ERS (Energy Recovery System) recovery level.
+        ers_power_level (int): The ERS power level.
+        ers_heat_charging (int): The ERS heat charging status.
+        ers_is_charging (int): Whether the ERS is charging.
+        kers_current_kj (float): The current KERS energy in kilojoules.
+        drs_available (int): Whether DRS is available.
+        drs_enabled (int): Whether DRS is enabled.
+        brake_temp (float * 4): The temperature of each brake.
+        clutch (float): The clutch level.
+        tyre_temp_i (float * 4): The inner temperature of each tire.
+        tyre_temp_m (float * 4): The middle temperature of each tire.
+        tyre_temp_o (float * 4): The outer temperature of each tire.
+        is_ai_controlled (int): Whether the car is AI controlled.
+        tyre_contact_point (float * 4 * 3): The contact points of each tire.
+        tyre_contact_normal (float * 4 * 3): The contact normals of each tire.
+        tyre_contact_heading (float * 4 * 3): The contact headings of each tire.
+        brake_bias (float): The brake bias.
+        local_velocity (float * 3): The local velocity vector.
+        p2p_activations (int): The number of push-to-pass activations.
+        p2p_status (int): The status of push-to-pass.
+        current_max_rpm (int): The current maximum RPM.
+        mz (float * 4): The aligning moment for each tire.
+        fx (float * 4): The longitudinal force for each tire.
+        fy (float * 4): The lateral force for each tire.
+        slip_ratio (float * 4): The slip ratio for each tire.
+        slip_angle (float * 4): The slip angle for each tire.
+        tc_in_action (int): Whether traction control is in action.
+        abs_in_action (int): Whether ABS is in action.
+        suspension_damage (float * 4): The damage level of each suspension.
+        tyre_temp (float * 4): The temperature of each tire.
+    """
     _fields_ = [
         ("packet_id", ctypes.c_int),
         ("gas", ctypes.c_float),
@@ -276,8 +373,54 @@ PHYSICS_DATA_SIZE = ctypes.sizeof(PhysicsData)
 
 
 # Define the structure of the graphics telemetry data
-# noinspection PyTypeChecker
+# noinspection PyTypeChecker,PyUnresolvedReferences
 class GraphicsData(ctypes.Structure):
+    """
+    A ctypes Structure representing the graphics telemetry data from Assetto Corsa.
+
+    Attributes:
+        packet_id (int): The unique identifier for the data packet.
+        status (int): The status of the session.
+        session (int): The type of session (e.g., practice, qualifying, race).
+        current_time (wchar * 15): The current lap time as a wide character string.
+        last_time (wchar * 15): The last lap time as a wide character string.
+        best_time (wchar * 15): The best lap time as a wide character string.
+        split (wchar * 15): The split time as a wide character string.
+        completed_laps (int): The number of completed laps.
+        position (int): The current position in the session.
+        i_current_time (int): The current lap time in milliseconds.
+        i_last_time (int): The last lap time in milliseconds.
+        i_best_time (int): The best lap time in milliseconds.
+        session_time_left (float): The remaining time in the session.
+        distance_traveled (float): The distance traveled in the session.
+        is_in_pit (int): Whether the car is in the pit.
+        current_sector_index (int): The current sector index.
+        last_sector_time (int): The last sector time in milliseconds.
+        number_of_laps (int): The total number of laps.
+        tyre_compound (wchar * 33): The tyre compound as a wide character string.
+        replay_time_multiplier (float): The replay time multiplier.
+        normalized_car_position (float): The normalized car position.
+        active_cars (int): The number of active cars.
+        car_coordinates (float * 60 * 3): The coordinates of the cars.
+        car_id (int * 60): The IDs of the cars.
+        player_car_id (int): The ID of the player's car.
+        penalty_time (float): The penalty time.
+        flag (int): The flag status.
+        penalty (int): The penalty status.
+        ideal_line_on (int): Whether the ideal line is on.
+        is_in_pit_lane (int): Whether the car is in the pit lane.
+        surface_grip (float): The surface grip level.
+        mandatory_pit_done (int): Whether the mandatory pit stop is done.
+        wind_speed (float): The wind speed.
+        wind_direction (float): The wind direction.
+        is_setup_menu_visible (int): Whether the setup menu is visible.
+        main_display_index (int): The main display index.
+        secondary_display_index (int): The secondary display index.
+        TC (int): The traction control level.
+        TCCut (int): The traction control cut level.
+        EngineMap (int): The engine map setting.
+        ABS (int): The anti-lock braking system level.
+    """
     _fields_ = [
         ("packet_id", ctypes.c_int),
         ("status", ctypes.c_int),
@@ -325,14 +468,14 @@ class GraphicsData(ctypes.Structure):
 
 GRAPHICS_DATA_SIZE = ctypes.sizeof(GraphicsData)
 
-# Initialize CSV logger
-csv_logger = None
-if write_tx_to_csv:
-    # noinspection PyRedeclaration
-    csv_logger = CSVLogger(tx_csv_file, TelemetryData._fields, log_execution_time)
-
 
 def transmit_loop():
+    """
+    Main loop for transmitting telemetry data.
+
+    This function continuously checks if Assetto Corsa is running, reads physics data from shared memory,
+    constructs a telemetry data packet, and sends it via UDP. It also updates the UI and logs data if required.
+    """
     # noinspection PyGlobalUndefined
     global running, txbuf
 
@@ -346,20 +489,20 @@ def transmit_loop():
 
     while running:
 
-        game_was_running = True
-        while not is_game_running():
+        ac_was_running = True
+        while not is_ac_running():
             searching_for_assetto()
             time.sleep(1)
-            game_was_running = False
+            ac_was_running = False
 
-        if not game_was_running:
+        if not ac_was_running:
             # Assetto Corsa now launching
             for i in range(launch_wait_time):
                 waiting_for_launch(launch_wait_time - i)
                 time.sleep(1)
         running = True
 
-        while is_game_running() and running:
+        while is_ac_running() and running:
             if log_execution_time:
                 current_time = time.time()
                 time_taken = current_time - last_time
@@ -392,10 +535,10 @@ def transmit_loop():
 
                 # Construct tx buffer using namedTuple (TwinCAT format)
                 txbuf = TelemetryData(
-                    Heartbeat=float(heartbeat),
+                    Heartbeat=int(heartbeat),
                     NSimRequest=int(modelConstants["NSimRequest"]),
                     NCueingMode=int(modelConstants["NCueingMode"]),
-                    BEnableBrakeBooster=float(modelConstants["BEnableBrakeBooster"]),
+                    BEnableBrakeBooster=int(modelConstants["BEnableBrakeBooster"]),
                     gLongDemand=physics_data.acc_g[2],
                     gLatDemand=physics_data.acc_g[0],
                     gVertDemand=physics_data.acc_g[1],
@@ -452,20 +595,19 @@ def transmit_loop():
                     xLongSpeedPreposMax=0.0,
                     vCarSpeedPreposMin=0.0,
                     vCarSpeedPreposMax=0.0,
-                    NMSteer=physics_data.final_ff * float(modelConstants["TorqueMultiplier"])
+                    NMSteer=int(physics_data.final_ff * float(modelConstants["TorqueMultiplier"]))
                 )
 
                 # Pack the buffer into the pre-defined binary format
                 udp_packet = struct.pack(
-                    TRANSMIT_PACKET_FORMAT,
-                    # Format string: big-endian (>), 4 bytes for USINT/SINT + 56 floats + 1 short
-                    int(txbuf.Heartbeat),  # USINT (8-bit unsigned)
-                    int(txbuf.NSimRequest),  # SINT (8-bit signed)
-                    int(txbuf.NCueingMode),  # SINT (8-bit signed)
-                    int(txbuf.BEnableBrakeBooster),  # USINT (8-bit unsigned)
+                    TRANSMIT_PACKET_FORMAT,  # Format string
+                    txbuf.Heartbeat,  # USINT (8-bit unsigned)
+                    txbuf.NSimRequest,  # SINT (8-bit signed)
+                    txbuf.NCueingMode,  # SINT (8-bit signed)
+                    txbuf.BEnableBrakeBooster,  # USINT (8-bit unsigned)
                     *txbuf[4:-1],  # 56 floats as they are
-                    int(txbuf.NMSteer)  # INT (16-bit signed)
-                 )
+                    txbuf.NMSteer  # INT (16-bit signed)
+                )
 
                 # hex_data = ' '.join(f'{byte:02X}' for byte in udp_packet)
 
@@ -520,6 +662,13 @@ def receive_loop():
 
 # noinspection PyGlobalUndefined
 def start_transmission():
+    """
+    Start the transmission of telemetry data.
+
+    This function sets the `running` flag to True and starts two threads:
+    one for transmitting telemetry data (`transmit_thread`) and one for
+    receiving incoming UDP packets (`receive_thread`).
+    """
     global running
     running = True
     transmit_thread = threading.Thread(target=transmit_loop, daemon=True)
@@ -530,6 +679,13 @@ def start_transmission():
 
 # noinspection PyGlobalUndefined
 def stop_transmission():
+    """
+    Stop the transmission of telemetry data.
+
+    This function sets the `running` flag to False, updates the status, speed,
+    and gear labels to indicate that the transmission has stopped, and turns off
+    the activity light.
+    """
     global running
     running = False
     status_label.config(text="State: Stopped")
@@ -540,6 +696,12 @@ def stop_transmission():
 
 # noinspection PyGlobalUndefined
 def searching_for_assetto():
+    """
+    Update the UI to indicate that Assetto Corsa is not running.
+
+    This function sets the `running` flag to False and updates the status, speed,
+    and gear labels to reflect that no data is being received from Assetto Corsa.
+    """
     global running
     running = False
     status_label.config(text="State: No data")
@@ -548,6 +710,16 @@ def searching_for_assetto():
 
 
 def waiting_for_launch(seconds_remaining=None):
+    """
+    Update the UI to indicate the waiting state during the launch of Assetto Corsa.
+
+    This function updates the status, speed, and gear labels to reflect that the system
+    is waiting for the game to launch. If the number of seconds remaining is provided,
+    it will be displayed in the status label.
+
+    Args:
+        seconds_remaining (int, optional): The number of seconds remaining until the launch is complete. Defaults to None.
+    """
     if seconds_remaining:
         status_label.config(text=f"State: Wait ({seconds_remaining}s)")
     else:
@@ -557,7 +729,18 @@ def waiting_for_launch(seconds_remaining=None):
 
 
 def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
+    """
+    Get the absolute path to a resource.
+
+    This function is used to get the absolute path to a resource, whether the script is running
+    in a PyInstaller bundle or as a standard Python script.
+
+    Args:
+        relative_path (str): The relative path to the resource.
+
+    Returns:
+        str: The absolute path to the resource.
+    """
     # noinspection PyBroadException
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
