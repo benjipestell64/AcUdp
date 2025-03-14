@@ -152,10 +152,14 @@ def open_shared_memory(name, size, retries=3, delay=2):
     exit(1)
 
 
-def update_console_state(state):
+def set_activity_light(active=False):
     # Move cursor back to the start of the line and print the activity
     # sys.stdout.write(f"\rActivity: [{state}]")
     # sys.stdout.flush()
+    if active:
+        state = "█"
+    else:
+        state = "▒"
     activity_light.config(text="Activity: " + state)
 
 
@@ -382,7 +386,7 @@ def transmit_loop():
 
             # If new data is available, assemble and send it
             if physics_data.packet_id != last_packet_id:
-                update_console_state("●")  # Activity light on
+                set_activity_light(True)  # Activity light on
                 last_packet_id = physics_data.packet_id
                 heartbeat = not heartbeat  # Beat heart
 
@@ -492,7 +496,7 @@ def transmit_loop():
 
             else:
                 # No new data
-                update_console_state("○")
+                set_activity_light(False)
 
 
 def receive_loop():
@@ -531,7 +535,7 @@ def stop_transmission():
     status_label.config(text="State: Stopped")
     speed_label.config(text="Speed: N/A")
     gear_label.config(text="Gear: N/A")
-    update_console_state("○")
+    set_activity_light(False)
 
 
 # noinspection PyGlobalUndefined
