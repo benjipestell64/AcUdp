@@ -137,11 +137,7 @@ TRANSMIT_PACKET_FORMAT = ">BbbB" + "f" * 56 + "h"  # Big endian, 1 USINT, 2 SINT
 
 # Check if the game window is open
 def is_game_running():
-    windows = gw.getAllTitles()
-    for title in windows:
-        if title == "Assetto Corsa":
-            return True
-    return False
+    return any(title == "Assetto Corsa" for title in gw.getAllTitles())
 
 
 # Open shared memory
@@ -480,7 +476,7 @@ def transmit_loop():
                     gear = "R"
                 elif gear == 0:
                     gear = "N"
-                gear_label.config(text=f"Gear: {txbuf.NGear:.0f}")
+                gear_label.config(text=f"Gear: {gear}")
 
                 # Console output (for debugging)
                 if debug_output:
