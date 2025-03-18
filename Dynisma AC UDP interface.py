@@ -765,13 +765,13 @@ def resource_path(relative_path):
 root = tk.Tk()
 root.title("Assetto Corsa UDP Interface")
 root.iconbitmap(resource_path("dynisma.ico"))
-root.geometry("290x180")
+root.geometry("350x210")
 
 frame = ttk.Frame(root, padding=10)
 # noinspection PyTypeChecker
 frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-transmit_label = ttk.Label(frame, text="Target: " + UDP_IP + " : " + str(UDP_PORT))
+transmit_label = ttk.Label(frame, text="Target: " + UDP_IP + " Port: " + str(UDP_PORT))
 transmit_label.grid(row=0, column=0, columnspan=8, pady=5)
 
 # Transmit
@@ -800,13 +800,18 @@ rx_activity_light.grid(row=2, column=4, columnspan=1, padx=5, pady=5, sticky="w"
 set_rx_activity_light()
 
 rx_packet_id_label = ttk.Label(frame, text="Packet ID: N/A")
-rx_packet_id_label.grid(row=3, column=4, columnspan=1, padx=5, pady=5, sticky="w")
+rx_packet_id_label.grid(row=2, column=5, columnspan=1, padx=5, pady=5, sticky="w")
+
+# Logging
+logging_label = ttk.Label(frame, text="Log: " + tx_csv_file if write_tx_to_csv else "Log: Disabled")
+logging_label.grid(row=4, column=0, columnspan=4, pady=5, sticky="w")
 
 # Buttons
 start_button = ttk.Button(frame, text="Start", command=start)
-start_button.grid(row=4, column=0, columnspan=4, padx=5, pady=5)
+start_button.grid(row=5, column=0, columnspan=4, padx=5, pady=5)
 
 stop_button = ttk.Button(frame, text="Stop", command=stop)
-stop_button.grid(row=4, column=4, columnspan=4, padx=5, pady=5)
+stop_button.grid(row=5, column=4, columnspan=4, padx=5, pady=5)
 
+start()
 root.mainloop()
