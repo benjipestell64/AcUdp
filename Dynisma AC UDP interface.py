@@ -511,7 +511,19 @@ def transmit_loop():
                 time.sleep(1)
         running = True
 
-        while is_ac_running() and running:
+        check_counter = 0
+        ac_running_cached = True  # assume running at this point
+
+        while running and ac_running_cached:
+            # Reduce the frequency of checking if AC is running
+            if check_counter == 0:
+                ac_running_cached = is_ac_running()
+                check_counter = 100  # reset counter
+            else:
+                check_counter -= 1
+            if not ac_running_cached:
+                break
+
             if log_execution_time:
                 current_time = time.time()
                 time_taken = current_time - last_time
