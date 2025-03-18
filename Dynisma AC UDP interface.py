@@ -30,8 +30,10 @@ DEFAULT_SETTINGS = {
     },
     'Logging': {
         'write_tx_to_csv': 'False',
+        'write_rx_to_csv': 'False',
         'log_execution_time': 'False',
-        'tx_csv_file': 'telemetry_log.csv'
+        'tx_csv_file': 'telemetry_log.csv',
+        'rx_csv_file': 'controller_log.csv'
     },
     'Processing': {
         'read_graphics_telemetry': 'False',
@@ -83,8 +85,10 @@ debug_output = config.getboolean('Debug', 'debug_output')
 
 # Read logging settings
 write_tx_to_csv = config.getboolean('Logging', 'write_tx_to_csv')
+write_rx_to_csv = config.getboolean('Logging', 'write_rx_to_csv')
 log_execution_time = config.getboolean('Logging', 'log_execution_time')
 tx_csv_file = config.get('Logging', 'tx_csv_file')
+rx_csv_file = config.get('Logging', 'rx_csv_file')
 
 # Read processing settings
 read_graphics_telemetry = config.getboolean('Processing', 'read_graphics_telemetry')
@@ -188,22 +192,31 @@ def set_tx_activity_light(active=False):
     state = ACTIVE_LIGHT if active else INACTIVE_LIGHT
     tx_activity_light.config(text="Activity: " + state)
 
+
 def set_rx_activity_light(active=False):
     state = ACTIVE_LIGHT if active else INACTIVE_LIGHT
     rx_activity_light.config(text="Activity: " + state)
 
 
+def pulse_rx_activity_light(duration=0.1):
+    """Turn on RX activity light for a short duration."""
+    set_rx_activity_light(True)
+    threading.Timer(duration, lambda: set_rx_activity_light(False)).start()
+
+
 class CSVLogger:
     """
-        A class to handle CSV logging operations.
+            A class to handle CSV logging operations.
 
-        Attributes:
-            file_path (str): The path to the CSV file.
-            log_execution_time (bool): Whether to log execution time.
-    """
+            Attributes:
+                file_path (str): The path to the CSV file.
+                column_headers (list): The headers for the CSV columns.
+                log_execution_time (bool): Whether to log execution time.
+        """
 
-    def __init__(self, file_path, headers, bool_log_execution_time=False):
+    def __init__(self, file_path, column_headers, bool_log_execution_time=False):
         self.file_path = file_path
+        self.column_headers = column_headers
         self.log_execution_time = bool_log_execution_time
 
         # Remove existing file if it exists
@@ -211,15 +224,12 @@ class CSVLogger:
             os.remove(self.file_path)
 
         # Create CSV file with headers
-        self.create_csv(headers)
+        self.create_csv(column_headers)
 
     def create_csv(self, column_headers):
         with open(self.file_path, mode="w", newline="") as file:
             csv_writer = csv.writer(file)
-            if self.log_execution_time:
-                csv_writer.writerow(["Latency", "PacketID"] + list(column_headers))
-            else:
-                csv_writer.writerow(["PacketID"] + list(column_headers))
+            csv_writer.writerow(column_headers)
 
     def log(self, data, additional_data=None):
         with open(self.file_path, mode="a", newline="") as file:
@@ -230,11 +240,20 @@ class CSVLogger:
             csv_writer.writerow(data)
 
 
-# Initialize CSV logger
-csv_logger = None
+# Initialize CSV loggers
+csv_tx_logger = None
+csv_rx_logger = None
 if write_tx_to_csv:
     # noinspection PyRedeclaration
-    csv_logger = CSVLogger(tx_csv_file, TelemetryData._fields, log_execution_time)
+    if log_execution_time:
+        headers = ["Latency", "PacketID"] + list(TelemetryData._fields)
+    else:
+        headers = ["PacketID"] + list(TelemetryData._fields)
+    csv_tx_logger = CSVLogger(tx_csv_file, headers, log_execution_time)
+if write_rx_to_csv:
+    # noinspection PyRedeclaration
+    headers = ["Timestamp"] + list(ControllerData._fields)
+    csv_rx_logger = CSVLogger(rx_csv_file, headers)
 
 
 # Define the structure of the physics telemetry data
@@ -668,9 +687,9 @@ def transmit_loop():
                 if write_tx_to_csv:
                     packet_id = physics_data.packet_id
                     if log_execution_time:
-                        csv_logger.log(txbuf, [time_taken, packet_id])
+                        csv_tx_logger.log(txbuf, [time_taken, packet_id])
                     else:
-                        csv_logger.log(txbuf, [packet_id])
+                        csv_tx_logger.log(txbuf, [packet_id])
 
             else:
                 # No new data
@@ -681,6 +700,7 @@ def transmit_loop():
 def receive_loop():
     """Thread to listen for incoming UDP packets."""
     global running
+    start_time = time.time()
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         sock.bind((UDP_IP, UDP_PORT))
@@ -691,11 +711,16 @@ def receive_loop():
 
     while running and socket_bound:
         data, addr = sock.recvfrom(RECEIVE_PACKET_SIZE)
-        if len(data) == RECEIVE_PACKET_SIZE:
-            unpacked_data = struct.unpack(RECEIVE_PACKET_FORMAT, data)
+        if len(data) == RECEIVE_PACKET_SIZE or True:
+            timestamp = time.time() - start_time
 
-            print("Received Data:", unpacked_data)
+            unpacked_data = struct.unpack(RECEIVE_PACKET_FORMAT, data)
             received_data = ControllerData(*unpacked_data)
+
+            pulse_rx_activity_light()
+
+            rx_timestamp_label.config(text=f"Timestamp: {timestamp:07.2f}s")
+            csv_rx_logger.log(received_data, [timestamp])
 
 
 # noinspection PyGlobalUndefined
@@ -727,8 +752,8 @@ def stop():
     global running
     running = False
     status_label.config(text="State: Stop")
-    speed_label.config(text="Speed: N/A")
-    gear_label.config(text="Gear: N/A")
+    speed_label.config(text="Speed: 000 km/h")
+    gear_label.config(text="Gear: 0")
     set_tx_activity_light(False)
 
 
@@ -792,17 +817,17 @@ def resource_path(relative_path):
 root = tk.Tk()
 root.title("Assetto Corsa UDP Interface")
 root.iconbitmap(resource_path("dynisma.ico"))
-root.geometry("370x210")
+root.geometry("380x245")
 
 frame = ttk.Frame(root, padding=10)
 # noinspection PyTypeChecker
 frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-transmit_label = ttk.Label(frame, text="Target: " + UDP_IP + " Port: " + str(UDP_PORT))
+transmit_label = ttk.Label(frame, text="Target: " + UDP_IP + " Port: " + str(UDP_PORT), foreground="gray20")
 transmit_label.grid(row=0, column=0, columnspan=8, pady=5)
 
 # Transmit
-transmit_label = ttk.Label(frame, text="Transmit")
+transmit_label = ttk.Label(frame, text="Transmit", background="gray80")
 transmit_label.grid(row=1, column=0, columnspan=4, pady=5)
 
 tx_activity_light = ttk.Label(frame, text="")
@@ -818,26 +843,38 @@ speed_label.grid(row=2, column=2, columnspan=1, padx=5, pady=5, sticky="w")
 gear_label = ttk.Label(frame, text="Gear: N/A")
 gear_label.grid(row=3, column=2, columnspan=1, padx=5, pady=5, sticky="w")
 
-logging_label = ttk.Label(frame, text="Log: " + tx_csv_file if write_tx_to_csv else "Log: Disabled")
-logging_label.grid(row=4, column=0, columnspan=4, padx=5, pady=5, sticky="w")
+tx_logging_label = ttk.Label(frame, text="Log: " + tx_csv_file if write_tx_to_csv else "Log: Disabled", foreground="gray20")
+tx_logging_label.grid(row=4, column=0, columnspan=3, padx=5, pady=5, sticky="w")
 
 # Receive
-transmit_label = ttk.Label(frame, text="Receive")
+transmit_label = ttk.Label(frame, text="Receive", background="grey80")
 transmit_label.grid(row=1, column=4, columnspan=4, pady=5)
 
 rx_activity_light = ttk.Label(frame, text="")
 rx_activity_light.grid(row=2, column=4, columnspan=1, padx=5, pady=5, sticky="w")
 set_rx_activity_light()
 
-rx_packet_id_label = ttk.Label(frame, text="Packet ID: N/A")
-rx_packet_id_label.grid(row=2, column=5, columnspan=1, padx=5, pady=5, sticky="w")
+rx_timestamp_label = ttk.Label(frame, text="Timestamp: 0000.00")
+rx_timestamp_label.grid(row=2, column=5, columnspan=1, padx=5, pady=5, sticky="w")
+
+rx_logging_label = ttk.Label(frame, text="Log: " + rx_csv_file if write_rx_to_csv else "Log: Disabled", foreground="gray20")
+rx_logging_label.grid(row=4, column=4, columnspan=3, padx=5, pady=5, sticky="w")
 
 # Buttons
-start_button = ttk.Button(frame, text="Start", command=start)
-start_button.grid(row=5, column=0, columnspan=4, padx=5, pady=5)
+open_tx_log_button = ttk.Button(frame, text="Open", width=5, command=lambda: os.system(f"start {tx_csv_file}"))
+open_tx_log_button.grid(row=4, column=2, columnspan=1, padx=0, pady=5, sticky="e")
 
-stop_button = ttk.Button(frame, text="Stop", command=stop)
-stop_button.grid(row=5, column=4, columnspan=4, padx=5, pady=5)
+open_rx_log_button = ttk.Button(frame, text="Open", width=5, command=lambda: os.system(f"start {rx_csv_file}"))
+open_rx_log_button.grid(row=4, column=5, columnspan=1, padx=0, pady=5, sticky="e")
+
+config_button = ttk.Button(frame, text="Configure ⚙️", width=55, command=lambda: os.system(f"start {CONFIG_FILE}"))
+config_button.grid(row=6, column=0, columnspan=8, padx=5, pady=5)
+
+start_button = ttk.Button(frame, text="Start", width=25, command=start)
+start_button.grid(row=7, column=0, columnspan=4, padx=5, pady=5)
+
+stop_button = ttk.Button(frame, text="Stop", width=25, command=stop)
+stop_button.grid(row=7, column=4, columnspan=4, padx=5, pady=5)
 
 start()
 root.mainloop()
