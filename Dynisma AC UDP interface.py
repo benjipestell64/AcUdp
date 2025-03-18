@@ -124,6 +124,21 @@ TelemetryData = namedtuple('TelemetryData', [
     "NMSteer"
 ])
 
+# Define the namedtuple for received controller data
+ControllerData = namedtuple('ControllerData', [
+    "NAMotorSteer",    "NNMotorSteer",
+    "gLongChassis",    "gLatChassis",    "gVertChassis",
+    "dnRollChassis",    "dnPitchChassis",    "dnYawChassis",
+    "xLongWorld",    "xLatWorld",    "xVertWorld",
+    "aRollWorld",    "aPitchWorld",    "aYawWorld",
+    "vLongWorld",    "vLatWorld",    "vVertWorld",
+    "nRollWorld",    "nPitchWorld",    "nYawWorld",
+    "xLongDemandWorld",    "xLatDemandWorld",    "xVertDemandWorld",
+    "aRollDemandWorld",    "aPitchDemandWorld",    "aYawDemandWorld",
+    "vLongDemandWorld",    "vLatDemandWorld",    "vVertDemandWorld",
+    "nRollDemandWorld",    "nPitchDemandWorld",    "nYawDemandWorld"
+])
+
 # UDP packet structure
 RECEIVE_PACKET_FORMAT = "<" + "i" * 2 + "f" * 28  # Little endian, 2 DINT (int32), 28 REAL (float32)
 RECEIVE_PACKET_SIZE = struct.calcsize(RECEIVE_PACKET_FORMAT)
@@ -680,7 +695,7 @@ def receive_loop():
             unpacked_data = struct.unpack(RECEIVE_PACKET_FORMAT, data)
 
             print("Received Data:", unpacked_data)
-            # Update the UI or process the data as needed
+            received_data = ControllerData(*unpacked_data)
 
 
 # noinspection PyGlobalUndefined
@@ -777,7 +792,7 @@ def resource_path(relative_path):
 root = tk.Tk()
 root.title("Assetto Corsa UDP Interface")
 root.iconbitmap(resource_path("dynisma.ico"))
-root.geometry("350x210")
+root.geometry("370x210")
 
 frame = ttk.Frame(root, padding=10)
 # noinspection PyTypeChecker
@@ -803,6 +818,9 @@ speed_label.grid(row=2, column=2, columnspan=1, padx=5, pady=5, sticky="w")
 gear_label = ttk.Label(frame, text="Gear: N/A")
 gear_label.grid(row=3, column=2, columnspan=1, padx=5, pady=5, sticky="w")
 
+logging_label = ttk.Label(frame, text="Log: " + tx_csv_file if write_tx_to_csv else "Log: Disabled")
+logging_label.grid(row=4, column=0, columnspan=4, padx=5, pady=5, sticky="w")
+
 # Receive
 transmit_label = ttk.Label(frame, text="Receive")
 transmit_label.grid(row=1, column=4, columnspan=4, pady=5)
@@ -813,10 +831,6 @@ set_rx_activity_light()
 
 rx_packet_id_label = ttk.Label(frame, text="Packet ID: N/A")
 rx_packet_id_label.grid(row=2, column=5, columnspan=1, padx=5, pady=5, sticky="w")
-
-# Logging
-logging_label = ttk.Label(frame, text="Log: " + tx_csv_file if write_tx_to_csv else "Log: Disabled")
-logging_label.grid(row=4, column=0, columnspan=4, pady=5, sticky="w")
 
 # Buttons
 start_button = ttk.Button(frame, text="Start", command=start)
