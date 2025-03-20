@@ -204,6 +204,11 @@ def pulse_rx_activity_light(duration=0.1):
     threading.Timer(duration, lambda: set_rx_activity_light(False)).start()
 
 
+def set_rx_socket_bound_light(active=False):
+    state = ACTIVE_LIGHT if active else INACTIVE_LIGHT
+    rx_socket_bound_light.config(text="Socket bound: " + state)
+
+
 class CSVLogger:
     """
             A class to handle CSV logging operations.
@@ -705,9 +710,11 @@ def receive_loop():
     try:
         sock.bind((UDP_IP, UDP_PORT))
         socket_bound = True
+        set_rx_socket_bound_light(True)
     except OSError:
         print(f"Error: Receive loop unable to bind to {UDP_IP}:{UDP_PORT}.")
         socket_bound = False
+        set_rx_socket_bound_light(False)
 
     while running and socket_bound:
         data, addr = sock.recvfrom(RECEIVE_PACKET_SIZE)
@@ -857,6 +864,10 @@ set_rx_activity_light()
 rx_timestamp_label = ttk.Label(frame, text="Timestamp: 0000.00")
 rx_timestamp_label.grid(row=2, column=5, columnspan=1, padx=5, pady=5, sticky="w")
 
+rx_socket_bound_light = ttk.Label(frame, text="")
+rx_socket_bound_light.grid(row=3, column=4, columnspan=2, padx=5, pady=5, sticky="w")
+set_rx_socket_bound_light()
+
 rx_logging_label = ttk.Label(frame, text="Log: " + rx_csv_file if write_rx_to_csv else "Log: Disabled", foreground="gray20")
 rx_logging_label.grid(row=4, column=4, columnspan=3, padx=5, pady=5, sticky="w")
 
@@ -867,8 +878,8 @@ open_tx_log_button.grid(row=4, column=2, columnspan=1, padx=0, pady=5, sticky="e
 open_rx_log_button = ttk.Button(frame, text="Open", width=5, command=lambda: os.system(f"start {rx_csv_file}"))
 open_rx_log_button.grid(row=4, column=5, columnspan=1, padx=0, pady=5, sticky="e")
 
-config_button = ttk.Button(frame, text="Configure ⚙️", width=55, command=lambda: os.system(f"start {CONFIG_FILE}"))
-config_button.grid(row=6, column=0, columnspan=8, padx=5, pady=5)
+config_button = ttk.Button(frame, text="Configure ⚙️", width=50, command=lambda: os.system(f"start {CONFIG_FILE}"))
+config_button.grid(row=6, column=0, columnspan=8, padx=10, pady=5)
 
 start_button = ttk.Button(frame, text="Start", width=25, command=start)
 start_button.grid(row=7, column=0, columnspan=4, padx=5, pady=5)
