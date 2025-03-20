@@ -95,7 +95,8 @@ read_graphics_telemetry = config.getboolean('Processing', 'read_graphics_telemet
 launch_wait_time = config.getint('Processing', 'launch_wait_time')
 
 # Read model constants
-modelConstants = {key: (int(value) if value.isdigit() else float(value)) for key, value in config.items('ModelConstants')}
+modelConstants = {key: (int(value) if value.isdigit() else float(value)) for key, value in
+                  config.items('ModelConstants')}
 
 # Read washout settings
 washoutSettings = {key: float(value) for key, value in config.items('WashoutSettings')}
@@ -130,17 +131,17 @@ TelemetryData = namedtuple('TelemetryData', [
 
 # Define the namedtuple for received controller data
 ControllerData = namedtuple('ControllerData', [
-    "NAMotorSteer",    "NNMotorSteer",
-    "gLongChassis",    "gLatChassis",    "gVertChassis",
-    "dnRollChassis",    "dnPitchChassis",    "dnYawChassis",
-    "xLongWorld",    "xLatWorld",    "xVertWorld",
-    "aRollWorld",    "aPitchWorld",    "aYawWorld",
-    "vLongWorld",    "vLatWorld",    "vVertWorld",
-    "nRollWorld",    "nPitchWorld",    "nYawWorld",
-    "xLongDemandWorld",    "xLatDemandWorld",    "xVertDemandWorld",
-    "aRollDemandWorld",    "aPitchDemandWorld",    "aYawDemandWorld",
-    "vLongDemandWorld",    "vLatDemandWorld",    "vVertDemandWorld",
-    "nRollDemandWorld",    "nPitchDemandWorld",    "nYawDemandWorld"
+    "NAMotorSteer", "NNMotorSteer",
+    "gLongChassis", "gLatChassis", "gVertChassis",
+    "dnRollChassis", "dnPitchChassis", "dnYawChassis",
+    "xLongWorld", "xLatWorld", "xVertWorld",
+    "aRollWorld", "aPitchWorld", "aYawWorld",
+    "vLongWorld", "vLatWorld", "vVertWorld",
+    "nRollWorld", "nPitchWorld", "nYawWorld",
+    "xLongDemandWorld", "xLatDemandWorld", "xVertDemandWorld",
+    "aRollDemandWorld", "aPitchDemandWorld", "aYawDemandWorld",
+    "vLongDemandWorld", "vLatDemandWorld", "vVertDemandWorld",
+    "nRollDemandWorld", "nPitchDemandWorld", "nYawDemandWorld"
 ])
 
 # UDP packet structure
@@ -162,6 +163,7 @@ def attach_console():
 if debug_output:
     print("Debug output enabled.")
     attach_console()
+
 
 # Check if the ac window is open
 def is_ac_running():
@@ -249,6 +251,7 @@ class CSVLogger:
         with open(self.file_path, mode="w", newline="") as file:
             csv_writer = csv.writer(file)
             csv_writer.writerow(column_headers)
+            print("Log file created:", self.file_path)
 
     def log(self, data, additional_data=None):
         with open(self.file_path, mode="a", newline="") as file:
@@ -564,6 +567,8 @@ def transmit_loop():
                 time.sleep(1)
         running = True
 
+        print("Assetto Corsa running.")
+
         check_counter = 0
         ac_running_cached = True  # assume running at this point
 
@@ -700,8 +705,7 @@ def transmit_loop():
 
                 # Console output (for debugging)
                 if debug_output:
-                    print(
-                        f"Packet sent - Speed: {physics_data.speed_kmh:.1f} km/h, RPM: {physics_data.rpms}, throttle: {physics_data.gas:.1f}, brake: {physics_data.brake:.1f}, Steering Torque: {physics_data.final_ff:.1f}")
+                    print(f"Packet sent - Speed: {physics_data.speed_kmh:.1f} km/h, RPM: {physics_data.rpms}, throttle: {physics_data.gas:.1f}, brake: {physics_data.brake:.1f}, Steering Torque: {physics_data.final_ff:.1f}")
 
                 if write_tx_to_csv:
                     packet_id = physics_data.packet_id
@@ -864,7 +868,8 @@ speed_label.grid(row=2, column=2, columnspan=1, padx=5, pady=5, sticky="w")
 gear_label = ttk.Label(frame, text="Gear: N/A")
 gear_label.grid(row=3, column=2, columnspan=1, padx=5, pady=5, sticky="w")
 
-tx_logging_label = ttk.Label(frame, text="Log: " + tx_csv_file if write_tx_to_csv else "Log: Disabled", foreground="gray20")
+tx_logging_label = ttk.Label(frame, text="Log: " + tx_csv_file if write_tx_to_csv else "Log: Disabled",
+                             foreground="gray20")
 tx_logging_label.grid(row=4, column=0, columnspan=3, padx=5, pady=5, sticky="w")
 
 # Receive
@@ -882,7 +887,8 @@ rx_socket_bound_light = ttk.Label(frame, text="")
 rx_socket_bound_light.grid(row=3, column=4, columnspan=2, padx=5, pady=5, sticky="w")
 set_rx_socket_bound_light()
 
-rx_logging_label = ttk.Label(frame, text="Log: " + rx_csv_file if write_rx_to_csv else "Log: Disabled", foreground="gray20")
+rx_logging_label = ttk.Label(frame, text="Log: " + rx_csv_file if write_rx_to_csv else "Log: Disabled",
+                             foreground="gray20")
 rx_logging_label.grid(row=4, column=4, columnspan=3, padx=5, pady=5, sticky="w")
 
 # Buttons
