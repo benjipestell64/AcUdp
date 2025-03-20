@@ -149,6 +149,20 @@ RECEIVE_PACKET_SIZE = struct.calcsize(RECEIVE_PACKET_FORMAT)
 TRANSMIT_PACKET_FORMAT = ">BbbB" + "f" * 56 + "h"  # Big endian, 1 USINT, 2 SINT, 1 USINT, 56 REAL, 1 short INT
 
 
+def attach_console():
+    if not ctypes.windll.kernel32.AllocConsole():
+        # Console already exists or failed — could try FreeConsole + AllocConsole if needed
+        return
+    sys.stdout = open('CONOUT$', 'w')
+    sys.stderr = open('CONOUT$', 'w')
+    sys.stdin = open('CONIN$', 'r')
+    print("Debug console attached! (can disable in config)")
+
+
+if debug_output:
+    print("Debug output enabled.")
+    attach_console()
+
 # Check if the ac window is open
 def is_ac_running():
     return any(title == "Assetto Corsa" for title in gw.getAllTitles())
