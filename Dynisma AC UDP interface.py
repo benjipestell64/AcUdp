@@ -842,7 +842,6 @@ def resource_path(relative_path):
 root = tk.Tk()
 root.title("Assetto Corsa UDP Interface")
 root.iconbitmap(resource_path("dynisma.ico"))
-root.geometry("380x245")
 
 frame = ttk.Frame(root, padding=10)
 # noinspection PyTypeChecker
