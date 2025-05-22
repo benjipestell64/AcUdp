@@ -227,15 +227,23 @@ def set_rx_socket_bound_light(active=False):
 
 class CSVLogger:
     """
-            A class to handle CSV logging operations.
+    A class to handle CSV logging operations.
 
-            Attributes:
-                file_path (str): The path to the CSV file.
-                column_headers (list): The headers for the CSV columns.
-                log_execution_time (bool): Whether to log execution time.
-        """
+    Attributes:
+        file_path (str): The path to the CSV file.
+        column_headers (list): The column headers for the CSV file.
+        log_execution_time (bool): Whether to log execution time.
+    """
 
     def __init__(self, file_path, column_headers, bool_log_execution_time=False):
+        """
+        Initialize the CSVLogger.
+
+        Args:
+            file_path (str): The path to the CSV file.
+            column_headers (list): The column headers for the CSV file.
+            bool_log_execution_time (bool, optional): Whether to log execution time. Defaults to False.
+        """
         self.file_path = file_path
         self.column_headers = column_headers
         self.log_execution_time = bool_log_execution_time
@@ -248,12 +256,25 @@ class CSVLogger:
         self.create_csv(column_headers)
 
     def create_csv(self, column_headers):
+        """
+        Create a new CSV file with the specified column headers.
+
+        Args:
+            column_headers (list): The column headers for the CSV file.
+        """
         with open(self.file_path, mode="w", newline="") as file:
             csv_writer = csv.writer(file)
             csv_writer.writerow(column_headers)
             print("Log file created:", self.file_path)
 
     def log(self, data, additional_data=None):
+        """
+        Log data to the CSV file.
+
+        Args:
+            data (list): The data to log.
+            additional_data (list, optional): Additional data to log. Defaults to None.
+        """
         with open(self.file_path, mode="a", newline="") as file:
             data = list(data)
             if additional_data:
@@ -618,12 +639,12 @@ def transmit_loop():
                     NSimRequest=int(modelConstants["NSimRequest"]),
                     NCueingMode=int(modelConstants["NCueingMode"]),
                     BEnableBrakeBooster=int(modelConstants["BEnableBrakeBooster"]),
-                    gLongDemand=physics_data.acc_g[2],
-                    gLatDemand=physics_data.acc_g[0],
-                    gVertDemand=physics_data.acc_g[1],
-                    dnRollDemand=0.0,
-                    dnPitchDemand=0.0,
-                    dnYawDemand=0.0,
+                    gLongDemand=physics_data.acc_g[2]*9.81,
+                    gLatDemand=physics_data.acc_g[0]*9.81,
+                    gVertDemand=physics_data.acc_g[1]*9.81,
+                    dnRollDemand=physics_data.local_angular_vel[0],
+                    dnPitchDemand=physics_data.local_angular_vel[1],
+                    dnYawDemand=physics_data.local_angular_vel[2],
                     vLongCar=physics_data.speed_kmh / 3.6,
                     gLongExternalCueing=0.0,
                     gLatExternalCueing=0.0,
@@ -647,7 +668,7 @@ def transmit_loop():
                     NGear=float(physics_data.gear - 1),
                     rUpshiftCue=0.0,
                     rDownshiftCue=0.0,
-                    rEngineCue=0.0,
+                    rEngineCue=1.0,
                     aSlipCue=0.0,
                     nSlipCar=0.0,
                     dnSlipCar=0.0,
@@ -671,9 +692,9 @@ def transmit_loop():
                     zetaWashoutPitch=float(washoutSettings["zetaWashoutPitch"]),
                     zetaWashoutYaw=float(washoutSettings["zetaWashoutYaw"]),
                     xLongSpeedPreposMin=0.0,
-                    xLongSpeedPreposMax=0.0,
-                    vCarSpeedPreposMin=0.0,
-                    vCarSpeedPreposMax=0.0,
+                    xLongSpeedPreposMax=0.2,
+                    vCarSpeedPreposMin=30,
+                    vCarSpeedPreposMax=85,
                     NMSteer=int(physics_data.final_ff * float(modelConstants["TorqueMultiplier"]))
                 )
 
