@@ -76,6 +76,12 @@ if not os.path.exists(CONFIG_FILE):
 
 config.read(CONFIG_FILE)
 
+# Variables for recording and playback
+recording = False
+playback = False
+recorded_data = []
+playback_index = 0
+
 # Read network settings
 UDP_IP = config.get('Network', 'UDP_IP')
 UDP_PORT = config.getint('Network', 'UDP_PORT')
@@ -459,6 +465,153 @@ class PhysicsData(ctypes.Structure):
 PHYSICS_DATA_SIZE = ctypes.sizeof(PhysicsData)
 
 
+def physics_to_row(phys: PhysicsData):
+    """Flatten a PhysicsData struct to a list of floats."""
+    row = []
+    for field_name, field_type in phys._fields_:
+        val = getattr(phys, field_name)
+
+        if isinstance(val, ctypes.Array):
+            # Check for nested arrays (e.g., float[4][3])
+            if isinstance(val[0], ctypes.Array):
+                for subarray in val:
+                    row.extend(subarray[:])
+            else:
+                row.extend(val[:])
+        else:
+            row.append(val)
+    return row
+
+
+
+def row_to_physics(row):
+    """Reconstruct a PhysicsData object from a flat list of floats."""
+    phys = PhysicsData()
+    flat_idx = 0
+
+    for field_name, field_type in PhysicsData._fields_:
+        if hasattr(field_type, "_length_"):  # It's an array
+            if hasattr(field_type._type_, "_length_"):  # Nested array
+                for i in range(field_type._length_):
+                    for j in range(field_type._type_._length_):
+                        getattr(phys, field_name)[i][j] = float(row[flat_idx])
+                        flat_idx += 1
+            else:
+                for i in range(field_type._length_):
+                    getattr(phys, field_name)[i] = float(row[flat_idx])
+                    flat_idx += 1
+        else:
+            if field_type == ctypes.c_int:
+                setattr(phys, field_name, int(row[flat_idx]))
+            elif field_type == ctypes.c_float:
+                setattr(phys, field_name, float(row[flat_idx]))
+            else:
+                # Fallback for unknown types
+                setattr(phys, field_name, row[flat_idx])
+            flat_idx += 1
+
+    return phys
+
+
+
+PHYSICS_UNITS = {
+    "packet_id": "",
+    "gas": "0-1",
+    "brake": "0-1",
+    "fuel": "L",
+    "gear": "",
+    "rpms": "rpm",
+    "steer_angle": "rad",
+    "speed_kmh": "km/h",
+    "velocity": "m/s",
+    "acc_g": "g",
+    "wheel_slip": "",
+    "wheel_load": "N",
+    "wheels_pressure": "psi",
+    "wheel_angular_speed": "rad/s",
+    "tyre_wear": "0-1",
+    "tyre_dirty_level": "0-1",
+    "tyre_core_temperature": "°C",
+    "camber_rad": "rad",
+    "suspension_travel": "m",
+    "drs": "bool",
+    "tc": "bool",
+    "heading": "rad",
+    "pitch": "rad",
+    "roll": "rad",
+    "cg_height": "m",
+    "car_damage": "0-1",
+    "number_of_tyres_out": "",
+    "pit_limiter_on": "bool",
+    "abs": "bool",
+    "kers_charge": "J",
+    "kers_input": "W",
+    "auto_shifter_on": "bool",
+    "ride_height": "m",
+    "turbo_boost": "bar",
+    "ballast": "kg",
+    "air_density": "kg/m³",
+    "air_temp": "°C",
+    "road_temp": "°C",
+    "local_angular_vel": "rad/s",
+    "final_ff": "Nm",
+    "performance_meter": "",
+    "engine_brake": "",
+    "ers_recovery_level": "",
+    "ers_power_level": "",
+    "ers_heat_charging": "bool",
+    "ers_is_charging": "bool",
+    "kers_current_kj": "kJ",
+    "drs_available": "bool",
+    "drs_enabled": "bool",
+    "brake_temp": "°C",
+    "clutch": "0-1",
+    "tyre_temp_i": "°C",
+    "tyre_temp_m": "°C",
+    "tyre_temp_o": "°C",
+    "is_ai_controlled": "bool",
+    "tyre_contact_point": "m",
+    "tyre_contact_normal": "",
+    "tyre_contact_heading": "rad",
+    "brake_bias": "%",
+    "local_velocity": "m/s",
+    "p2p_activations": "",
+    "p2p_status": "bool",
+    "current_max_rpm": "rpm",
+    "mz": "Nm",
+    "fx": "N",
+    "fy": "N",
+    "slip_ratio": "",
+    "slip_angle": "rad",
+    "tc_in_action": "bool",
+    "abs_in_action": "bool",
+    "suspension_damage": "0-1",
+    "tyre_temp": "°C"
+}
+
+
+def get_physics_headers():
+    """Generate CSV headers with units based on PhysicsData layout."""
+    headers = []
+    for field_name, field_type in PhysicsData._fields_:
+        unit = PHYSICS_UNITS.get(field_name, "")
+        suffix = f" ({unit})" if unit else ""
+
+        if hasattr(field_type, "_length_"):  # It's an array
+            length = field_type._length_
+            if hasattr(field_type._type_, "_length_"):  # Nested array
+                sublen = field_type._type_._length_
+                for i in range(length):
+                    for j in range(sublen):
+                        headers.append(f"{field_name}[{i}][{j}]{suffix}")
+            else:
+                for i in range(length):
+                    headers.append(f"{field_name}[{i}]{suffix}")
+        else:
+            headers.append(f"{field_name}{suffix}")
+    return headers
+
+
 # Define the structure of the graphics telemetry data
 # noinspection PyTypeChecker,PyUnresolvedReferences
 class GraphicsData(ctypes.Structure):
@@ -610,13 +763,24 @@ def transmit_loop():
                 last_time = current_time
 
             # Read physics data from shared memory
-            physics_file_handle = open_shared_memory(AC_PHYSICS_MEMORY_NAME, PHYSICS_DATA_SIZE)
-            physics_file_handle.seek(0)
-            try:
-                raw_data = physics_file_handle.read(PHYSICS_DATA_SIZE)
-            except OSError:
-                continue  # Skip this iteration if shared memory is temporarily unavailable
-            physics_data = PhysicsData.from_buffer_copy(raw_data)
+            global recorded_data, playback_index
+
+            if playback and recorded_data:
+                if playback_index >= len(recorded_data):
+                    playback_index = 0  # Loop playback
+                physics_data = recorded_data[playback_index]
+                playback_index += 1
+                time.sleep(1 / 60)  # Match AC update rate ~60Hz
+            else:
+                physics_file_handle = open_shared_memory(AC_PHYSICS_MEMORY_NAME, PHYSICS_DATA_SIZE)
+                physics_file_handle.seek(0)
+                try:
+                    raw_data = physics_file_handle.read(PHYSICS_DATA_SIZE)
+                except OSError:
+                    continue
+                physics_data = PhysicsData.from_buffer_copy(raw_data)
+                if recording:
+                    recorded_data.append(physics_to_row(physics_data))
 
             # Read graphics data from shared memory
             if read_graphics_telemetry:
@@ -640,12 +804,12 @@ def transmit_loop():
                     NSimRequest=int(modelConstants["NSimRequest"]),
                     NCueingMode=int(modelConstants["NCueingMode"]),
                     BEnableBrakeBooster=int(modelConstants["BEnableBrakeBooster"]),
-                    gLongDemand=physics_data.acc_g[2]*9.81,
-                    gLatDemand=physics_data.acc_g[0]*9.81,
-                    gVertDemand=physics_data.acc_g[1]*9.81,
-                    dnRollDemand=physics_data.local_angular_vel[0]*2*math.pi,
-                    dnPitchDemand=physics_data.local_angular_vel[1]*2*math.pi,
-                    dnYawDemand=physics_data.local_angular_vel[2]*2*math.pi,
+                    gLongDemand=physics_data.acc_g[2] * 9.81,
+                    gLatDemand=physics_data.acc_g[0] * 9.81,
+                    gVertDemand=physics_data.acc_g[1] * 9.81,
+                    dnRollDemand=physics_data.local_angular_vel[0] * 2 * math.pi,
+                    dnPitchDemand=physics_data.local_angular_vel[1] * 2 * math.pi,
+                    dnYawDemand=physics_data.local_angular_vel[2] * 2 * math.pi,
                     vLongCar=physics_data.speed_kmh / 3.6,
                     gLongExternalCueing=0.0,
                     gLatExternalCueing=0.0,
@@ -667,9 +831,9 @@ def transmit_loop():
                     aYawExternalCueing=0.0,
                     nEngine=physics_data.rpms * (2 * 3.142 / 60),
                     NGear=float(physics_data.gear - 1),
-                    rUpshiftCue=1.25-0.8,
-                    rDownshiftCue=1.2-0.8,  # This is a vector in GT DiL settings: [2, 2, 2, 1, 1, 1]
-                    rEngineCue=1.0*(physics_data.gas*0.3 + 0.7),
+                    rUpshiftCue=1.25 - 0.8,
+                    rDownshiftCue=1.2 - 0.8,  # This is a vector in GT DiL settings: [2, 2, 2, 1, 1, 1]
+                    rEngineCue=1.0 * (physics_data.gas * 0.3 + 0.7),
                     aSlipCue=0.0,
                     nSlipCar=0.0,
                     dnSlipCar=0.0,
@@ -727,7 +891,8 @@ def transmit_loop():
 
                 # Console output (for debugging)
                 if debug_output:
-                    print(f"Packet sent - Speed: {physics_data.speed_kmh:.1f} km/h, RPM: {physics_data.rpms}, throttle: {physics_data.gas:.1f}, brake: {physics_data.brake:.1f}, Steering Torque: {physics_data.final_ff:.1f}")
+                    print(
+                        f"Packet sent - Speed: {physics_data.speed_kmh:.1f} km/h, RPM: {physics_data.rpms}, throttle: {physics_data.gas:.1f}, brake: {physics_data.brake:.1f}, Steering Torque: {physics_data.final_ff:.1f}")
 
                 if write_tx_to_csv:
                     packet_id = physics_data.packet_id
@@ -802,6 +967,51 @@ def stop():
     speed_label.config(text="Speed: 000 km/h")
     gear_label.config(text="Gear: 0")
     set_tx_activity_light(False)
+
+
+def toggle_record():
+    global recording, recorded_data
+    if not recording:
+        recorded_data = []
+        recording = True
+        record_button.config(text="Stop Recording")
+    else:
+        recording = False
+        record_button.config(text="Record")
+        headers = get_physics_headers()
+
+        # Sanity check
+        test_row = physics_to_row(PhysicsData())
+        if len(headers) != len(test_row):
+            print(f"❌ Mismatch: {len(headers)} headers vs {len(test_row)} values!")
+
+        with open("recorded_physics.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(headers)
+            for data in recorded_data:
+                writer.writerow(data)
+        print("Saved", len(recorded_data), "frames to CSV.")
+
+
+def toggle_playback():
+    global playback, recorded_data, playback_index
+    if not playback:
+        try:
+            with open("recorded_physics.csv", "r") as f:
+                reader = csv.reader(f)
+                next(reader)  # Skip header
+                recorded_data = [row_to_physics(list(map(float, row))) for row in reader if any(row)]
+            playback_index = 0
+            playback = True
+            playback_button.config(text="Stop Playback")
+            print("Loaded", len(recorded_data), "frames from CSV.")
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print("Playback load failed:", e)
+    else:
+        playback = False
+        playback_button.config(text="Playback")
 
 
 # noinspection PyGlobalUndefined
@@ -927,6 +1137,12 @@ start_button.grid(row=7, column=0, columnspan=4, padx=5, pady=5)
 
 stop_button = ttk.Button(frame, text="Stop", width=25, command=stop)
 stop_button.grid(row=7, column=4, columnspan=4, padx=5, pady=5)
+
+record_button = ttk.Button(frame, text="Record", width=25, command=toggle_record)
+record_button.grid(row=8, column=0, columnspan=4, padx=5, pady=5)
+
+playback_button = ttk.Button(frame, text="Playback", width=25, command=toggle_playback)
+playback_button.grid(row=8, column=4, columnspan=4, padx=5, pady=5)
 
 start()
 root.mainloop()
