@@ -1,3 +1,4 @@
+import math
 import mmap
 import ctypes
 import time
@@ -617,15 +618,15 @@ def transmit_loop():
                 continue  # Skip this iteration if shared memory is temporarily unavailable
             physics_data = PhysicsData.from_buffer_copy(raw_data)
 
-            # # Read graphics data from shared memory
-            # if read_graphics_telemetry:
-            #     graphics_file_handle = open_shared_memory(AC_GRAPHICS_MEMORY_NAME, GRAPHICS_DATA_SIZE)
-            #     graphics_file_handle.seek(0)
-            #     try:
-            #         raw_data = graphics_file_handle.read(GRAPHICS_DATA_SIZE)
-            #     except OSError:
-            #         continue  # Skip this iteration if shared memory is temporarily unavailable
-            #     graphics_data = GraphicsData.from_buffer_copy(raw_data)
+            # Read graphics data from shared memory
+            if read_graphics_telemetry:
+                graphics_file_handle = open_shared_memory(AC_GRAPHICS_MEMORY_NAME, GRAPHICS_DATA_SIZE)
+                graphics_file_handle.seek(0)
+                try:
+                    raw_data = graphics_file_handle.read(GRAPHICS_DATA_SIZE)
+                except OSError:
+                    continue  # Skip this iteration if shared memory is temporarily unavailable
+                graphics_data = GraphicsData.from_buffer_copy(raw_data)
 
             # If new data is available, assemble and send it
             if physics_data.packet_id != last_packet_id:
@@ -642,9 +643,9 @@ def transmit_loop():
                     gLongDemand=physics_data.acc_g[2]*9.81,
                     gLatDemand=physics_data.acc_g[0]*9.81,
                     gVertDemand=physics_data.acc_g[1]*9.81,
-                    dnRollDemand=physics_data.local_angular_vel[0],
-                    dnPitchDemand=physics_data.local_angular_vel[1],
-                    dnYawDemand=physics_data.local_angular_vel[2],
+                    dnRollDemand=physics_data.local_angular_vel[0]*2*math.pi,
+                    dnPitchDemand=physics_data.local_angular_vel[1]*2*math.pi,
+                    dnYawDemand=physics_data.local_angular_vel[2]*2*math.pi,
                     vLongCar=physics_data.speed_kmh / 3.6,
                     gLongExternalCueing=0.0,
                     gLatExternalCueing=0.0,
@@ -666,9 +667,9 @@ def transmit_loop():
                     aYawExternalCueing=0.0,
                     nEngine=physics_data.rpms * (2 * 3.142 / 60),
                     NGear=float(physics_data.gear - 1),
-                    rUpshiftCue=0.0,
-                    rDownshiftCue=0.0,
-                    rEngineCue=1.0,
+                    rUpshiftCue=1.25-0.8,
+                    rDownshiftCue=1.2-0.8,  # This is a vector in GT DiL settings: [2, 2, 2, 1, 1, 1]
+                    rEngineCue=1.0*(physics_data.gas*0.3 + 0.7),
                     aSlipCue=0.0,
                     nSlipCar=0.0,
                     dnSlipCar=0.0,
