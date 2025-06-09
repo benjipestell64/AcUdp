@@ -58,6 +58,8 @@ DEFAULT_SETTINGS = {
 
 CONFIG_FILE = 'config.txt'
 
+prev_ang_vel = [0.0, 0.0, 0.0]  # previous local angular velocity [rollRate, pitchRate, yawRate]
+prev_time = time.time()
 
 # Function to create config file with default settings
 def create_default_config():
@@ -483,7 +485,6 @@ def physics_to_row(phys: PhysicsData):
     return row
 
 
-
 def row_to_physics(row):
     """Reconstruct a PhysicsData object from a flat list of floats."""
     phys = PhysicsData()
@@ -511,7 +512,6 @@ def row_to_physics(row):
             flat_idx += 1
 
     return phys
-
 
 
 PHYSICS_UNITS = {
@@ -709,6 +709,35 @@ class GraphicsData(ctypes.Structure):
 GRAPHICS_DATA_SIZE = ctypes.sizeof(GraphicsData)
 
 
+def get_angular_acceleration_demand(physics_data):
+    global prev_ang_vel, prev_time
+
+    # Current angular velocity (rad/s)
+    ang_vel = physics_data.local_angular_vel  # e.g. [rollRate, pitchRate, yawRate]
+    current_time = time.time()
+    dt = current_time - prev_time
+
+    if dt <= 0.0001:  # Avoid division by zero or absurd acceleration
+        dt = 0.001
+
+    # Calculate angular acceleration (rad/s²)
+    ang_acc = [
+        (ang_vel[i] - prev_ang_vel[i]) / dt
+        for i in range(3)
+    ]
+
+    # Apply deadzone to suppress noise
+    noise_threshold = 0.01
+    ang_acc = [acc if abs(acc) >= noise_threshold else 0.0 for acc in ang_acc]
+
+    # Update previous values
+    prev_ang_vel = list(ang_vel)
+    prev_time = current_time
+
+    # Return acceleration demand
+    return ang_acc  # [rollAcc, pitchAcc, yawAcc]
+
+
 def transmit_loop():
     """
     Main loop for transmitting telemetry data.
@@ -793,10 +822,23 @@ def transmit_loop():
                 graphics_data = GraphicsData.from_buffer_copy(raw_data)
 
             # If new data is available, assemble and send it
-            if physics_data.packet_id != last_packet_id:
+            if physics_data.packet_id != last_packet_id or True:
                 set_tx_activity_light(True)  # Activity light on
                 last_packet_id = physics_data.packet_id
                 heartbeat = not heartbeat  # Beat heart
+                # rollAcc, pitchAcc, yawAcc = get_angular_acceleration_demand(physics_data)
+
+
+                # Suppress demands if speed is below a threshold
+                if physics_data.speed_kmh < 20.0:
+                    g_long = g_lat = g_vert = 0.0
+                    rollAcc = pitchAcc = yawAcc = 0.0
+                else:
+                    g_long = physics_data.acc_g[2] * 9.81
+                    g_lat = physics_data.acc_g[0] * 9.81
+                    g_vert = physics_data.acc_g[1] * 9.81
+                    pitchAcc, yawAcc, rollAcc = get_angular_acceleration_demand(physics_data)
+
 
                 # Construct tx buffer using namedTuple (TwinCAT format)
                 txbuf = TelemetryData(
@@ -804,12 +846,12 @@ def transmit_loop():
                     NSimRequest=int(modelConstants["NSimRequest"]),
                     NCueingMode=int(modelConstants["NCueingMode"]),
                     BEnableBrakeBooster=int(modelConstants["BEnableBrakeBooster"]),
-                    gLongDemand=physics_data.acc_g[2] * 9.81,
-                    gLatDemand=physics_data.acc_g[0] * 9.81,
-                    gVertDemand=physics_data.acc_g[1] * 9.81,
-                    dnRollDemand=physics_data.local_angular_vel[0] * 2 * math.pi,
-                    dnPitchDemand=physics_data.local_angular_vel[1] * 2 * math.pi,
-                    dnYawDemand=physics_data.local_angular_vel[2] * 2 * math.pi,
+                    gLongDemand=g_long,
+                    gLatDemand=g_lat,
+                    gVertDemand=g_vert,
+                    dnRollDemand=rollAcc,
+                    dnPitchDemand=pitchAcc,
+                    dnYawDemand=yawAcc,
                     vLongCar=physics_data.speed_kmh / 3.6,
                     gLongExternalCueing=0.0,
                     gLatExternalCueing=0.0,
@@ -826,9 +868,9 @@ def transmit_loop():
                     xLongExternalCueing=0.0,
                     xLatExternalCueing=0.0,
                     xVertExternalCueing=0.0,
-                    aRollExternalCueing=0.0,
-                    aPitchExternalCueing=0.0,
-                    aYawExternalCueing=0.0,
+                    aRollExternalCueing=physics_data.roll*-1*0.3,
+                    aPitchExternalCueing=physics_data.pitch*-1*0.3,
+                    aYawExternalCueing=physics_data.heading*-1*0,  # This seems like a bad idea?
                     nEngine=physics_data.rpms * (2 * 3.142 / 60),
                     NGear=float(physics_data.gear - 1),
                     rUpshiftCue=1.25 - 0.8,

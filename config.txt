@@ -1,0 +1,44 @@
+[Network]
+UDP_IP = 169.254.150.134
+UDP_PORT = 10000
+TRANSMIT_TO_SELF = False
+
+[Debug]
+debug_output = False
+
+[Logging]
+write_tx_to_csv = False
+write_rx_to_csv = False
+log_execution_time = False
+tx_csv_file = telemetry_log.csv
+rx_csv_file = controller_log.csv
+
+[Processing]
+read_graphics_telemetry = False
+launch_wait_time = 10
+
+[ModelConstants]
+NSimRequest = 6
+NCueingMode = 0
+BEnableBrakeBooster = 0
+TorqueMultiplier = 1.0
+
+[WashoutSettings]
+rWashoutLong = 0.5
+rWashoutLat = 0.6
+rWashoutVert = 0.3
+rWashoutRoll = 0.2
+rWashoutPitch = 0.2
+rWashoutYaw = 0.5
+fWashoutLong = 0.8
+fWashoutLat = 2
+fWashoutVert = 2
+fWashoutRoll = 1.5
+fWashoutPitch = 1.5
+fWashoutYaw = 0.6
+zetaWashoutLong = 1.2
+zetaWashoutLat = 2
+zetaWashoutVert = 4
+zetaWashoutRoll = 4
+zetaWashoutPitch = 3
+zetaWashoutYaw = 2
