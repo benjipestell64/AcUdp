@@ -1,4 +1,3 @@
-import math
 import mmap
 import ctypes
 import time
@@ -60,6 +59,7 @@ CONFIG_FILE = 'config.txt'
 
 prev_ang_vel = [0.0, 0.0, 0.0]  # previous local angular velocity [rollRate, pitchRate, yawRate]
 prev_time = time.time()
+
 
 # Function to create config file with default settings
 def create_default_config():
@@ -592,7 +592,7 @@ PHYSICS_UNITS = {
 
 def get_physics_headers():
     """Generate CSV headers with units based on PhysicsData layout."""
-    headers = []
+    physics_headers = []
     for field_name, field_type in PhysicsData._fields_:
         unit = PHYSICS_UNITS.get(field_name, "")
         suffix = f" ({unit})" if unit else ""
@@ -603,13 +603,13 @@ def get_physics_headers():
                 sublen = field_type._type_._length_
                 for i in range(length):
                     for j in range(sublen):
-                        headers.append(f"{field_name}[{i}][{j}]{suffix}")
+                        physics_headers.append(f"{field_name}[{i}][{j}]{suffix}")
             else:
                 for i in range(length):
-                    headers.append(f"{field_name}[{i}]{suffix}")
+                    physics_headers.append(f"{field_name}[{i}]{suffix}")
         else:
-            headers.append(f"{field_name}{suffix}")
-    return headers
+            physics_headers.append(f"{field_name}{suffix}")
+    return physics_headers
 
 
 # Define the structure of the graphics telemetry data
@@ -735,9 +735,10 @@ def get_angular_acceleration_demand(physics_data):
     prev_time = current_time
 
     # Return acceleration demand
-    return ang_acc  # [rollAcc, pitchAcc, yawAcc]
+    return ang_acc  # [acc_roll, acc_pitch, acc_yaw]
 
 
+# noinspection PyTypeChecker
 def transmit_loop():
     """
     Main loop for transmitting telemetry data.
@@ -811,34 +812,31 @@ def transmit_loop():
                 if recording:
                     recorded_data.append(physics_to_row(physics_data))
 
-            # Read graphics data from shared memory
-            if read_graphics_telemetry:
-                graphics_file_handle = open_shared_memory(AC_GRAPHICS_MEMORY_NAME, GRAPHICS_DATA_SIZE)
-                graphics_file_handle.seek(0)
-                try:
-                    raw_data = graphics_file_handle.read(GRAPHICS_DATA_SIZE)
-                except OSError:
-                    continue  # Skip this iteration if shared memory is temporarily unavailable
-                graphics_data = GraphicsData.from_buffer_copy(raw_data)
+            # # Read graphics data from shared memory
+            # if read_graphics_telemetry:
+            #     graphics_file_handle = open_shared_memory(AC_GRAPHICS_MEMORY_NAME, GRAPHICS_DATA_SIZE)
+            #     graphics_file_handle.seek(0)
+            #     try:
+            #         raw_data = graphics_file_handle.read(GRAPHICS_DATA_SIZE)
+            #     except OSError:
+            #         continue  # Skip this iteration if shared memory is temporarily unavailable
+            #     graphics_data = GraphicsData.from_buffer_copy(raw_data)
 
             # If new data is available, assemble and send it
             if physics_data.packet_id != last_packet_id or True:
                 set_tx_activity_light(True)  # Activity light on
                 last_packet_id = physics_data.packet_id
                 heartbeat = not heartbeat  # Beat heart
-                # rollAcc, pitchAcc, yawAcc = get_angular_acceleration_demand(physics_data)
-
 
                 # Suppress demands if speed is below a threshold
                 if physics_data.speed_kmh < 20.0:
                     g_long = g_lat = g_vert = 0.0
-                    rollAcc = pitchAcc = yawAcc = 0.0
+                    acc_roll = acc_pitch = acc_yaw = 0.0
                 else:
                     g_long = physics_data.acc_g[2] * 9.81
                     g_lat = physics_data.acc_g[0] * 9.81
                     g_vert = physics_data.acc_g[1] * 9.81
-                    pitchAcc, yawAcc, rollAcc = get_angular_acceleration_demand(physics_data)
-
+                    acc_pitch, acc_yaw, acc_roll = get_angular_acceleration_demand(physics_data)
 
                 # Construct tx buffer using namedTuple (TwinCAT format)
                 txbuf = TelemetryData(
@@ -849,9 +847,9 @@ def transmit_loop():
                     gLongDemand=g_long,
                     gLatDemand=g_lat,
                     gVertDemand=g_vert,
-                    dnRollDemand=rollAcc,
-                    dnPitchDemand=pitchAcc,
-                    dnYawDemand=yawAcc,
+                    dnRollDemand=acc_roll,
+                    dnPitchDemand=acc_pitch,
+                    dnYawDemand=acc_yaw,
                     vLongCar=physics_data.speed_kmh / 3.6,
                     gLongExternalCueing=0.0,
                     gLatExternalCueing=0.0,
@@ -868,9 +866,9 @@ def transmit_loop():
                     xLongExternalCueing=0.0,
                     xLatExternalCueing=0.0,
                     xVertExternalCueing=0.0,
-                    aRollExternalCueing=physics_data.roll*-1*0.3,
-                    aPitchExternalCueing=physics_data.pitch*-1*0.3,
-                    aYawExternalCueing=physics_data.heading*-1*0,  # This seems like a bad idea?
+                    aRollExternalCueing=physics_data.roll * -1 * 0.3,
+                    aPitchExternalCueing=physics_data.pitch * -1 * 0.3,
+                    aYawExternalCueing=physics_data.heading * -1 * 0,  # This seems like a bad idea?
                     nEngine=physics_data.rpms * (2 * 3.142 / 60),
                     NGear=float(physics_data.gear - 1),
                     rUpshiftCue=1.25 - 0.8,
@@ -948,7 +946,7 @@ def transmit_loop():
                 set_tx_activity_light(False)
 
 
-# noinspection PyGlobalUndefined
+# noinspection PyGlobalUndefined,PyTypeChecker
 def receive_loop():
     """Thread to listen for incoming UDP packets."""
     global running
@@ -1020,16 +1018,16 @@ def toggle_record():
     else:
         recording = False
         record_button.config(text="Record")
-        headers = get_physics_headers()
+        physics_headers = get_physics_headers()
 
         # Sanity check
         test_row = physics_to_row(PhysicsData())
-        if len(headers) != len(test_row):
-            print(f"❌ Mismatch: {len(headers)} headers vs {len(test_row)} values!")
+        if len(physics_headers) != len(test_row):
+            print(f"❌ Mismatch: {len(physics_headers)} headers vs {len(test_row)} values!")
 
         with open("recorded_physics.csv", "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(headers)
+            writer.writerow(physics_headers)
             for data in recorded_data:
                 writer.writerow(data)
         print("Saved", len(recorded_data), "frames to CSV.")
