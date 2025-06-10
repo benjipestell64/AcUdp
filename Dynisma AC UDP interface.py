@@ -1,6 +1,9 @@
+import math
 import mmap
 import ctypes
 import time
+from datetime import datetime
+from datetime import time as dt_time
 import socket
 import struct
 import configparser
@@ -150,13 +153,15 @@ ControllerData = namedtuple('ControllerData', [
     "xLongDemandWorld", "xLatDemandWorld", "xVertDemandWorld",
     "aRollDemandWorld", "aPitchDemandWorld", "aYawDemandWorld",
     "vLongDemandWorld", "vLatDemandWorld", "vVertDemandWorld",
-    "nRollDemandWorld", "nPitchDemandWorld", "nYawDemandWorld"
+    "nRollDemandWorld", "nPitchDemandWorld", "nYawDemandWorld",
+    "TransmitTimeTenMs"
 ])
 
 # UDP packet structure
-RECEIVE_PACKET_FORMAT = "<" + "i" * 2 + "f" * 28  # Little endian, 2 DINT (int32), 28 REAL (float32)
+RECEIVE_PACKET_FORMAT = "<" + "i" * 2 + "f" * 30 + "i"  # Big endian, 2 DINT (int32), 30 REAL (float32), 1 USINT (int32)
 RECEIVE_PACKET_SIZE = struct.calcsize(RECEIVE_PACKET_FORMAT)
-TRANSMIT_PACKET_FORMAT = ">BbbB" + "f" * 56 + "h"  # Big endian, 1 USINT, 2 SINT, 1 USINT, 56 REAL, 1 short INT
+TRANSMIT_PACKET_FORMAT = ">BbbB" + "f" * 56 + "h" + "i"  # Big endian, 1 USINT, 2 SINT, 1 USINT, 56 REAL, 1 short INT, 1 USINT
+TRANSMIT_PACKET_SIZE = struct.calcsize(TRANSMIT_PACKET_FORMAT)
 
 
 def attach_console():
@@ -304,7 +309,7 @@ if write_tx_to_csv:
     csv_tx_logger = CSVLogger(tx_csv_file, headers, log_execution_time)
 if write_rx_to_csv:
     # noinspection PyRedeclaration
-    headers = ["Timestamp"] + list(ControllerData._fields)
+    headers = ["Timestamp", "RTT (ms)"] + list(ControllerData._fields)
     csv_rx_logger = CSVLogger(rx_csv_file, headers)
 
 
@@ -738,6 +743,13 @@ def get_angular_acceleration_demand(physics_data):
     return ang_acc  # [acc_roll, acc_pitch, acc_yaw]
 
 
+def get_current_time_in_milliseconds() -> int:
+    """Returns the current time of day in milliseconds (since midnight)."""
+    now = datetime.now()
+    midnight = datetime.combine(now.date(), dt_time(0))
+    return int((now - midnight).total_seconds() * 1000)
+
+
 # noinspection PyTypeChecker
 def transmit_loop():
     """
@@ -823,7 +835,7 @@ def transmit_loop():
             #     graphics_data = GraphicsData.from_buffer_copy(raw_data)
 
             # If new data is available, assemble and send it
-            if physics_data.packet_id != last_packet_id or True:
+            if physics_data.packet_id != last_packet_id:
                 set_tx_activity_light(True)  # Activity light on
                 last_packet_id = physics_data.packet_id
                 heartbeat = not heartbeat  # Beat heart
@@ -903,6 +915,8 @@ def transmit_loop():
                     NMSteer=int(physics_data.final_ff * float(modelConstants["TorqueMultiplier"]))
                 )
 
+                current_time_ms = get_current_time_in_milliseconds()
+
                 # Pack the buffer into the pre-defined binary format
                 udp_packet = struct.pack(
                     TRANSMIT_PACKET_FORMAT,  # Format string
@@ -911,7 +925,8 @@ def transmit_loop():
                     txbuf.NCueingMode,  # SINT (8-bit signed)
                     txbuf.BEnableBrakeBooster,  # USINT (8-bit unsigned)
                     *txbuf[4:-1],  # 56 floats as they are
-                    txbuf.NMSteer  # INT (16-bit signed)
+                    txbuf.NMSteer,  # INT (16-bit signed)
+                    current_time_ms * 10  # INT (32-bit signed)
                 )
 
                 # hex_data = ' '.join(f'{byte:02X}' for byte in udp_packet)
@@ -950,10 +965,10 @@ def transmit_loop():
 def receive_loop():
     """Thread to listen for incoming UDP packets."""
     global running
-    start_time = time.time()
+    start_time_ms = get_current_time_in_milliseconds()
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        sock.bind((UDP_IP, UDP_PORT))
+        sock.bind(("0.0.0.0", UDP_PORT))
         socket_bound = True
         set_rx_socket_bound_light(True)
     except OSError:
@@ -963,16 +978,20 @@ def receive_loop():
 
     while running and socket_bound:
         data, addr = sock.recvfrom(RECEIVE_PACKET_SIZE)
-        if len(data) == RECEIVE_PACKET_SIZE or True:
-            timestamp = time.time() - start_time
+        if len(data) == RECEIVE_PACKET_SIZE or True:  # Always process data for testing
+            current_time_ms = get_current_time_in_milliseconds()
+            timestamp = current_time_ms - start_time_ms
 
             unpacked_data = struct.unpack(RECEIVE_PACKET_FORMAT, data)
             received_data = ControllerData(*unpacked_data)
 
             pulse_rx_activity_light()
 
-            rx_timestamp_label.config(text=f"Timestamp: {timestamp:07.2f}s")
-            csv_rx_logger.log(received_data, [timestamp])
+            received_tot = received_data.TransmitTimeTenMs / 10.0  # undo the 10x factor in the transmit loop
+            round_trip_time = current_time_ms - received_tot
+
+            rx_timestamp_label.config(text=f"Timestamp: {timestamp/1000}s")
+            csv_rx_logger.log(received_data, [current_time_ms, round_trip_time])
 
 
 # noinspection PyGlobalUndefined
