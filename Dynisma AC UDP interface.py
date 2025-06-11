@@ -89,6 +89,7 @@ playback_index = 0
 
 # Read network settings
 UDP_IP = config.get('Network', 'UDP_IP')
+UDP_RECEIVE_IP = "0.0.0.0"
 UDP_PORT = config.getint('Network', 'UDP_PORT')
 TRANSMIT_TO_SELF = config.getboolean('Network', 'TRANSMIT_TO_SELF')
 
@@ -713,34 +714,45 @@ class GraphicsData(ctypes.Structure):
 
 GRAPHICS_DATA_SIZE = ctypes.sizeof(GraphicsData)
 
+# Define global state variables
+prev_ang_vel = [0.0, 0.0, 0.0]
+prev_time = time.time()
+filtered_ang_acc = [0.0, 0.0, 0.0]  # Low-pass filtered angular acceleration
+
 
 def get_angular_acceleration_demand(physics_data):
-    global prev_ang_vel, prev_time
+    global prev_ang_vel, prev_time, filtered_ang_acc
 
     # Current angular velocity (rad/s)
     ang_vel = physics_data.local_angular_vel  # e.g. [rollRate, pitchRate, yawRate]
     current_time = time.time()
     dt = current_time - prev_time
 
-    if dt <= 0.0001:  # Avoid division by zero or absurd acceleration
+    if dt <= 0.0001:
         dt = 0.001
 
-    # Calculate angular acceleration (rad/s²)
-    ang_acc = [
+    # Calculate raw angular acceleration (rad/s²)
+    raw_ang_acc = [
         (ang_vel[i] - prev_ang_vel[i]) / dt
         for i in range(3)
     ]
 
-    # Apply deadzone to suppress noise
-    noise_threshold = 0.01
-    ang_acc = [acc if abs(acc) >= noise_threshold else 0.0 for acc in ang_acc]
+    # Apply deadzone
+    noise_threshold = 0.005
+    raw_ang_acc = [acc if abs(acc) >= noise_threshold else 0.0 for acc in raw_ang_acc]
+
+    # Low-pass filter (tunable alpha, e.g., 0.1 = heavy filtering)
+    alpha = 0.3
+    filtered_ang_acc = [
+        alpha * raw_ang_acc[i] + (1 - alpha) * filtered_ang_acc[i]
+        for i in range(3)
+    ]
 
     # Update previous values
     prev_ang_vel = list(ang_vel)
     prev_time = current_time
 
-    # Return acceleration demand
-    return ang_acc  # [acc_roll, acc_pitch, acc_yaw]
+    return filtered_ang_acc  # [filtered_acc_roll, filtered_acc_pitch, filtered_acc_yaw]
 
 
 def get_current_time_in_milliseconds() -> int:
@@ -968,11 +980,11 @@ def receive_loop():
     start_time_ms = get_current_time_in_milliseconds()
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        sock.bind(("0.0.0.0", UDP_PORT))
+        sock.bind((UDP_RECEIVE_IP, UDP_PORT))
         socket_bound = True
         set_rx_socket_bound_light(True)
     except OSError:
-        print(f"Error: Receive loop unable to bind to {UDP_IP}:{UDP_PORT}.")
+        print(f"Error: Receive loop unable to bind to {UDP_RECEIVE_IP}:{UDP_PORT}.")
         socket_bound = False
         set_rx_socket_bound_light(False)
 
@@ -990,7 +1002,7 @@ def receive_loop():
             received_tot = received_data.TransmitTimeTenMs / 10.0  # undo the 10x factor in the transmit loop
             round_trip_time = current_time_ms - received_tot
 
-            rx_timestamp_label.config(text=f"Timestamp: {timestamp/1000}s")
+            rx_timestamp_label.config(text=f"Timestamp: {timestamp / 1000}s")
             csv_rx_logger.log(received_data, [current_time_ms, round_trip_time])
 
 
