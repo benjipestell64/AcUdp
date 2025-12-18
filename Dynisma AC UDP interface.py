@@ -43,9 +43,9 @@ DEFAULT_SETTINGS = {
         'launch_wait_time': '10'
     },
     'ModelConstants': {
+        'MotionConsent': '1',
         'NSimRequest': '1',
-        'NCueingMode': '1',
-        'BEnableBrakeBooster': '0',
+        'SteeringTorqueEnableRequest': '0',
         'TorqueMultiplier': '1.0'
     },
     'WashoutSettings': {
@@ -120,17 +120,7 @@ if TRANSMIT_TO_SELF:
 
 # Define the namedtuple for telemetry data
 TelemetryData = namedtuple('TelemetryData', [
-    "Heartbeat", "NSimRequest", "NCueingMode", "BEnableBrakeBooster",
-    "gLongDemand", "gLatDemand", "gVertDemand",
-    "dnRollDemand", "dnPitchDemand", "dnYawDemand",
-    "vLongCar", "gLongExternalCueing", "gLatExternalCueing", "gVertExternalCueing",
-    "dnRollExternalCueing", "dnPitchExternalCueing", "dnYawExternalCueing",
-    "vLongExternalCueing", "vLatExternalCueing", "vVertExternalCueing",
-    "nRollExternalCueing", "nPitchExternalCueing", "nYawExternalCueing",
-    "xLongExternalCueing", "xLatExternalCueing", "xVertExternalCueing",
-    "aRollExternalCueing", "aPitchExternalCueing", "aYawExternalCueing",
-    "nEngine", "NGear", "rUpshiftCue", "rDownshiftCue", "rEngineCue",
-    "aSlipCue", "nSlipCar", "dnSlipCar", "rSideSlipCue",
+    "MotionConsent", "SimulationRunningHeartbeat", "NSimRequest", "SteeringTorqueEnableRequest",
     "rWashoutLong", "rWashoutLat", "rWashoutVert",
     "rWashoutRoll", "rWashoutPitch", "rWashoutYaw",
     "fWashoutLong", "fWashoutLat", "fWashoutVert",
@@ -139,7 +129,18 @@ TelemetryData = namedtuple('TelemetryData', [
     "zetaWashoutRoll", "zetaWashoutPitch", "zetaWashoutYaw",
     "xLongSpeedPreposMin", "xLongSpeedPreposMax",
     "vCarSpeedPreposMin", "vCarSpeedPreposMax",
-    "NMSteer"
+    "rSideSlipCue", "rEngineCue", "rUpshiftCue", "rDownshiftCue",
+    "gLongDemand", "gLatDemand", "gVertDemand",
+    "dnRollDemand", "dnPitchDemand", "dnYawDemand",
+    "vLongExternalCueing", "vLatExternalCueing", "vVertExternalCueing",
+    "nRollDemand", "nPitchDemand", "nYawDemand",
+    "xLongExternalCueing", "xLatExternalCueing", "xVertExternalCueing",
+    "aRollExternalCueing", "aPitchExternalCueing", "aYawExternalCueing",
+    "vLongCar", "NMSteer", "nEngine", "NGear",
+    "aSlipCue", "nSlipCar", "dnSlipCar",
+    # "dnRollExternalCueing", "dnPitchExternalCueing", "dnYawExternalCueing",
+    # "gLongExternalCueing", "gLatExternalCueing", "gVertExternalCueing",
+    # "nRollExternalCueing", "nPitchExternalCueing", "nYawExternalCueing",
 ])
 
 # Define the namedtuple for received controller data
@@ -154,14 +155,14 @@ ControllerData = namedtuple('ControllerData', [
     "xLongDemandWorld", "xLatDemandWorld", "xVertDemandWorld",
     "aRollDemandWorld", "aPitchDemandWorld", "aYawDemandWorld",
     "vLongDemandWorld", "vLatDemandWorld", "vVertDemandWorld",
-    "nRollDemandWorld", "nPitchDemandWorld", "nYawDemandWorld",
+    "nRollDemandWorld", "nPitchDemandWorld", "nYawDemandWorld"
     #"TransmitTimeTenMs"
 ])
 
 # UDP packet structure
 RECEIVE_PACKET_FORMAT = "<" + "i" * 2 + "f" * 30  # + "i"  # Big endian, 2 DINT (int32), 30 REAL (float32), 1 USINT (int32)
 RECEIVE_PACKET_SIZE = struct.calcsize(RECEIVE_PACKET_FORMAT)
-TRANSMIT_PACKET_FORMAT = ">BbbB" + "f" * 56 + "h" + "i"  # Little endian, 1 USINT, 2 SINT, 1 USINT, 56 REAL, 1 short INT, 1 USINT
+TRANSMIT_PACKET_FORMAT = ">BBbB" + "f" * 51  # Little endian, 2 USINT, 1 SINT, 1 USINT, 51 REAL
 TRANSMIT_PACKET_SIZE = struct.calcsize(TRANSMIT_PACKET_FORMAT)
 
 
@@ -906,44 +907,10 @@ def transmit_loop():
 
                 # Construct tx buffer using namedTuple (TwinCAT format)
                 txbuf = TelemetryData(
-                    Heartbeat=int(heartbeat),
+                    MotionConsent=int(modelConstants["MotionConsent"]),
+                    SimulationRunningHeartbeat=int(heartbeat),
                     NSimRequest=int(modelConstants["NSimRequest"]),
-                    NCueingMode=int(modelConstants["NCueingMode"]),
-                    BEnableBrakeBooster=int(modelConstants["BEnableBrakeBooster"]),
-                    gLongDemand=g_long,
-                    gLatDemand=g_lat,
-                    gVertDemand=g_vert,
-                    dnRollDemand=acc_roll,
-                    dnPitchDemand=acc_pitch,
-                    dnYawDemand=acc_yaw,
-                    vLongCar=physics_data.speed_kmh / 3.6,
-                    gLongExternalCueing=0.0,
-                    gLatExternalCueing=0.0,
-                    gVertExternalCueing=0.0,
-                    dnRollExternalCueing=0.0,
-                    dnPitchExternalCueing=0.0,
-                    dnYawExternalCueing=0.0,
-                    vLongExternalCueing=0.0,
-                    vLatExternalCueing=0.0,
-                    vVertExternalCueing=0.0,
-                    nRollExternalCueing=0.0,
-                    nPitchExternalCueing=0.0,
-                    nYawExternalCueing=0.0,
-                    xLongExternalCueing=0.0,
-                    xLatExternalCueing=0.0,
-                    xVertExternalCueing=0.0,
-                    aRollExternalCueing=physics_data.roll * -1 * 0.3,
-                    aPitchExternalCueing=physics_data.pitch * -1 * 0.3,
-                    aYawExternalCueing=physics_data.heading * -1 * 0,  # This seems like a bad idea?
-                    nEngine=physics_data.rpms * (2 * 3.142 / 60),
-                    NGear=float(physics_data.gear - 1),
-                    rUpshiftCue=1.25 - 0.8,
-                    rDownshiftCue=1.2 - 0.8,  # This is a vector in GT DiL settings: [2, 2, 2, 1, 1, 1]
-                    rEngineCue=1.0 * (physics_data.gas * 0.3 + 0.7),
-                    aSlipCue=0.0,
-                    nSlipCar=0.0,
-                    dnSlipCar=0.0,
-                    rSideSlipCue=0.0,
+                    SteeringTorqueEnableRequest=int(modelConstants["SteeringTorqueEnableRequest"]),
                     rWashoutLong=float(washoutSettings["rWashoutLong"]),
                     rWashoutLat=float(washoutSettings["rWashoutLat"]),
                     rWashoutVert=float(washoutSettings["rWashoutVert"]),
@@ -966,7 +933,45 @@ def transmit_loop():
                     xLongSpeedPreposMax=0.2,
                     vCarSpeedPreposMin=30,
                     vCarSpeedPreposMax=85,
-                    NMSteer=int(physics_data.final_ff * float(modelConstants["TorqueMultiplier"]))
+                    rSideSlipCue=0.0,
+                    rEngineCue=1.0 * (physics_data.gas * 0.3 + 0.7),
+                    rUpshiftCue=1.25 - 0.8,
+                    rDownshiftCue=1.2 - 0.8,  # This is a vector in GT DiL settings: [2, 2, 2, 1, 1, 1]
+                    gLongDemand=g_long,
+                    gLatDemand=g_lat,
+                    gVertDemand=g_vert,
+                    dnRollDemand=acc_roll,
+                    dnPitchDemand=acc_pitch,
+                    dnYawDemand=acc_yaw,
+                    vLongExternalCueing=0.0,
+                    vLatExternalCueing=0.0,
+                    vVertExternalCueing=0.0,
+                    nRollDemand=0.0,
+                    nPitchDemand=0.0,
+                    nYawDemand=0.0,
+                    xLongExternalCueing=0.0,
+                    xLatExternalCueing=0.0,
+                    xVertExternalCueing=0.0,
+                    aRollExternalCueing=physics_data.roll * -1 * 0.3,
+                    aPitchExternalCueing=physics_data.pitch * -1 * 0.3,
+                    aYawExternalCueing=physics_data.heading * -1 * 0,  # This seems like a bad idea?
+                    vLongCar=physics_data.speed_kmh / 3.6,
+                    NMSteer=int(physics_data.final_ff * float(modelConstants["TorqueMultiplier"])),
+                    nEngine=physics_data.rpms * (2 * 3.142 / 60),
+                    NGear=float(physics_data.gear - 1),
+                    aSlipCue=0.0,
+                    nSlipCar=0.0,
+                    dnSlipCar=0.0
+                    ##########################################################
+                    # gLongExternalCueing=0.0,
+                    # gLatExternalCueing=0.0,
+                    # gVertExternalCueing=0.0,
+                    # dnRollExternalCueing=0.0,
+                    # dnPitchExternalCueing=0.0,
+                    # dnYawExternalCueing=0.0,
+                    # nRollExternalCueing=0.0,
+                    # nPitchExternalCueing=0.0,
+                    # nYawExternalCueing=0.0,
                 )
 
                 current_time_ms = get_current_time_in_milliseconds()
@@ -974,13 +979,13 @@ def transmit_loop():
                 # Pack the buffer into the pre-defined binary format
                 udp_packet = struct.pack(
                     TRANSMIT_PACKET_FORMAT,  # Format string
-                    txbuf.Heartbeat,  # USINT (8-bit unsigned)
+                    txbuf.MotionConsent,  # USINT (8-bit unsigned)
+                    txbuf.SimulationRunningHeartbeat,  # USINT (8-bit unsigned)
                     txbuf.NSimRequest,  # SINT (8-bit signed)
-                    txbuf.NCueingMode,  # SINT (8-bit signed)
-                    txbuf.BEnableBrakeBooster,  # USINT (8-bit unsigned)
-                    *txbuf[4:-1],  # 56 floats as they are
-                    txbuf.NMSteer,  # INT (16-bit signed)
-                    current_time_ms * 10  # INT (32-bit signed)
+                    txbuf.SteeringTorqueEnableRequest,  # SINT (8-bit signed)
+                    *txbuf[4:]  # 51 floats as they are
+                    # txbuf.NMSteer  # INT (16-bit signed)
+                    # current_time_ms * 10  # INT (32-bit signed)
                 )
 
                 # hex_data = ' '.join(f'{byte:02X}' for byte in udp_packet)

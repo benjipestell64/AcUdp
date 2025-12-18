@@ -4,31 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5b0847b8-f272-4429-bc39-7b634ed277a5" name="Changes" comment="Added filtering to reduce noise - lost a lot of detial too though">
-      <change afterPath="$PROJECT_DIR$/.idea/ACSharedMemoryUDP.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/build/Dynisma AC UDP interface/Analysis-00.toc" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/build/Dynisma AC UDP interface/Dynisma AC UDP interface.pkg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/build/Dynisma AC UDP interface/EXE-00.toc" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/build/Dynisma AC UDP interface/PKG-00.toc" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/build/Dynisma AC UDP interface/PYZ-00.pyz" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/build/Dynisma AC UDP interface/PYZ-00.toc" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/build/Dynisma AC UDP interface/base_library.zip" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/build/Dynisma AC UDP interface/warn-Dynisma AC UDP interface.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/build/Dynisma AC UDP interface/xref-Dynisma AC UDP interface.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/status light.py" afterDir="false" />
+    <list default="true" id="5b0847b8-f272-4429-bc39-7b634ed277a5" name="Changes" comment="Drivable state">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Dynisma AC UDP interface.py" beforeDir="false" afterPath="$PROJECT_DIR$/Dynisma AC UDP interface.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dynisma AC UDP interface.spec" beforeDir="false" afterPath="$PROJECT_DIR$/Dynisma AC UDP interface.spec" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.txt" beforeDir="false" afterPath="$PROJECT_DIR$/config.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/Dynisma AC UDP interface.exe" beforeDir="false" afterPath="$PROJECT_DIR$/dist/Dynisma AC UDP interface.exe" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/Dynisma AC UDP send.exe" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/config.txt" beforeDir="false" afterPath="$PROJECT_DIR$/dist/config.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/receive.py" beforeDir="false" afterPath="$PROJECT_DIR$/receive.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,6 +33,11 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="master" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="ProjectColorInfo">{
@@ -64,26 +48,26 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.Dynisma AC UDP interface.executor&quot;: &quot;Run&quot;,
-    &quot;Python.Dynisma AC UDP send.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.receive.executor&quot;: &quot;Run&quot;,
-    &quot;Python.status light.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/benji/PycharmProjects/ACSharedMemoryUDP&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;Errors&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.Dynisma AC UDP interface.executor": "Run",
+    "Python.Dynisma AC UDP send.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.receive.executor": "Run",
+    "Python.status light.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "DMG__S",
+    "last_opened_file_path": "C:/Users/benji/PycharmProjects/ACSharedMemoryUDP",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "Errors",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\benji\PycharmProjects\ACSharedMemoryUDP" />
@@ -194,15 +178,7 @@
       <workItem from="1763375384078" duration="2260000" />
       <workItem from="1765123952475" duration="51000" />
       <workItem from="1765976030032" duration="2792000" />
-      <workItem from="1766057281369" duration="608000" />
-    </task>
-    <task id="LOCAL-00010" summary="Add a local receive script for debugging">
-      <option name="closed" value="true" />
-      <created>1741106366431</created>
-      <option name="number" value="00010" />
-      <option name="presentableId" value="LOCAL-00010" />
-      <option name="project" value="LOCAL" />
-      <updated>1741106366431</updated>
+      <workItem from="1766057281369" duration="4243000" />
     </task>
     <task id="LOCAL-00011" summary="Automatically determine CSV header">
       <option name="closed" value="true" />
@@ -588,7 +564,15 @@
       <option name="project" value="LOCAL" />
       <updated>1749646002355</updated>
     </task>
-    <option name="localTasksCounter" value="59" />
+    <task id="LOCAL-00059" summary="Drivable state">
+      <option name="closed" value="true" />
+      <created>1766058188168</created>
+      <option name="number" value="00059" />
+      <option name="presentableId" value="LOCAL-00059" />
+      <option name="project" value="LOCAL" />
+      <updated>1766058188168</updated>
+    </task>
+    <option name="localTasksCounter" value="60" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -621,7 +605,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Update icon to transparent" />
     <MESSAGE value="Tidy packet formats" />
     <MESSAGE value="Handle gear number display" />
     <MESSAGE value="Update activity symbol" />
@@ -646,11 +629,23 @@
     <MESSAGE value="Tidy code" />
     <MESSAGE value="Working in python - not when compiled though?" />
     <MESSAGE value="Added filtering to reduce noise - lost a lot of detial too though" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added filtering to reduce noise - lost a lot of detial too though" />
+    <MESSAGE value="Drivable state" />
+    <option name="LAST_COMMIT_MESSAGE" value="Drivable state" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/Dynisma AC UDP interface.py</url>
+          <line>979</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/Dynisma_AC_UDP_interface_py$status_light.coverage" NAME="status light Coverage Results" MODIFIED="1758273960406" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/Dynisma_AC_UDP_interface_py$Dynisma_AC_UDP_interface.coverage" NAME="Dynisma AC UDP interface Coverage Results" MODIFIED="1765976980198" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Dynisma_AC_UDP_interface_py$Dynisma_AC_UDP_interface.coverage" NAME="Dynisma AC UDP interface Coverage Results" MODIFIED="1766062105237" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Dynisma_AC_UDP_interface_py$receive.coverage" NAME="receive Coverage Results" MODIFIED="1750690334292" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/ACSharedMemoryUDP$receive.coverage" NAME="receive Coverage Results" MODIFIED="1741878115268" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/ACSharedMemoryUDP$Dynisma_AC_UDP_interface.coverage" NAME="Dynisma AC UDP interface Coverage Results" MODIFIED="1742552293328" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
