@@ -15,6 +15,7 @@ packet_format = (
         ">BBBB"  # 4 bytes: BHeartbeat, NSimRequest, NCueingMode, BEnableBrakeBooster
         + "f" * 56  # 56 floats (REAL values)
         + "h"  # 1 INT (16-bit) for NMSteer
+        + "i"  # 1 INT (32-bit) for Timestamp
 )
 
 expected_size = struct.calcsize(packet_format)
@@ -33,7 +34,7 @@ float_labels = [
     "rWashoutLong", "rWashoutLat", "rWashoutVert", "rWashoutRoll", "rWashoutPitch", "rWashoutYaw",
     "fWashoutLong", "fWashoutLat", "fWashoutVert", "fWashoutRoll", "fWashoutPitch", "fWashoutYaw",
     "zetaWashoutLong", "zetaWashoutLat", "zetaWashoutVert", "zetaWashoutRoll", "zetaWashoutPitch", "zetaWashoutYaw",
-    "xLongSpeedPreposMin", "xLongSpeedPreposMax", "vCarSpeedPreposMin", "vCarSpeedPreposMax"
+    "xLongSpeedPreposMin", "xLongSpeedPreposMax", "vCarSpeedPreposMin", "vCarSpeedPreposMax", "NMSteer"
 ]
 
 while True:
@@ -56,7 +57,7 @@ while True:
     float_values = unpacked_data[4:-1]
 
     # Extract the last value as a 16-bit integer
-    NMSteer = unpacked_data[-1]
+    TransmitTimeTenMs = unpacked_data[-1]
 
     print(f"Received packet from {addr}:")
     print(f"  BHeartbeat: {BHeartbeat}")
@@ -68,6 +69,4 @@ while True:
     print("  Float Values:")
     for label, value in zip(float_labels, float_values):
         print(f"    {label}: {value:.6f}")
-
-    print(f"  NMSteer: {NMSteer}")
-    print("-" * 80)
+    print(f"  TransmitTimeTenMs: {TransmitTimeTenMs}")

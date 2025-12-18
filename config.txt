@@ -1,13 +1,13 @@
 [Network]
 UDP_IP = 169.254.150.134
 UDP_PORT = 10000
-TRANSMIT_TO_SELF = False
+TRANSMIT_TO_SELF = True
 
 [Debug]
 debug_output = False
 
 [Logging]
-write_tx_to_csv = False
+write_tx_to_csv = True
 write_rx_to_csv = False
 log_execution_time = False
 tx_csv_file = telemetry_log.csv

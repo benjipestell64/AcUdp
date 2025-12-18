@@ -25,7 +25,7 @@ AC_GRAPHICS_MEMORY_NAME = "Local\\acpmf_graphics"
 DEFAULT_SETTINGS = {
     'Network': {
         'UDP_IP': '192.168.1.100',
-        'UDP_PORT': '20777',
+        'UDP_PORT': '10000',
         'TRANSMIT_TO_SELF': 'False'
     },
     'Debug': {
@@ -155,13 +155,13 @@ ControllerData = namedtuple('ControllerData', [
     "aRollDemandWorld", "aPitchDemandWorld", "aYawDemandWorld",
     "vLongDemandWorld", "vLatDemandWorld", "vVertDemandWorld",
     "nRollDemandWorld", "nPitchDemandWorld", "nYawDemandWorld",
-    "TransmitTimeTenMs"
+    #"TransmitTimeTenMs"
 ])
 
 # UDP packet structure
-RECEIVE_PACKET_FORMAT = "<" + "i" * 2 + "f" * 30 + "i"  # Big endian, 2 DINT (int32), 30 REAL (float32), 1 USINT (int32)
+RECEIVE_PACKET_FORMAT = "<" + "i" * 2 + "f" * 30  # + "i"  # Big endian, 2 DINT (int32), 30 REAL (float32), 1 USINT (int32)
 RECEIVE_PACKET_SIZE = struct.calcsize(RECEIVE_PACKET_FORMAT)
-TRANSMIT_PACKET_FORMAT = ">BbbB" + "f" * 56 + "h" + "i"  # Big endian, 1 USINT, 2 SINT, 1 USINT, 56 REAL, 1 short INT, 1 USINT
+TRANSMIT_PACKET_FORMAT = ">BbbB" + "f" * 56 + "h" + "i"  # Little endian, 1 USINT, 2 SINT, 1 USINT, 56 REAL, 1 short INT, 1 USINT
 TRANSMIT_PACKET_SIZE = struct.calcsize(TRANSMIT_PACKET_FORMAT)
 
 
@@ -755,6 +755,47 @@ def get_angular_acceleration_demand(physics_data):
     return filtered_ang_acc  # [filtered_acc_roll, filtered_acc_pitch, filtered_acc_yaw]
 
 
+prev_lin_vel = [0.0, 0.0, 0.0]
+filtered_lin_acc = [0.0, 0.0, 0.0]
+prev_time_lin = time.time()
+
+
+def get_linear_acceleration_demand(physics_data):
+    global prev_lin_vel, prev_time_lin, filtered_lin_acc
+
+    # # Current linear velocity (m/s) — change to whatever your API uses
+    # lin_vel = physics_data.local_velocity  # e.g. [vx, vy, vz]
+    # current_time = time.time()
+    # dt = current_time - prev_time_lin
+    # if dt <= 0.0001:
+    #     dt = 0.001
+    #
+    # # Raw linear acceleration (m/s²)
+    # raw_lin_acc = [
+    #     (lin_vel[i] - prev_lin_vel[i]) / dt
+    #     for i in range(3)
+    # ]
+
+    raw_lin_acc = physics_data.acc_g
+
+    # Deadzone to kill noise
+    noise_threshold = 0.005
+    raw_lin_acc = [acc if abs(acc) >= noise_threshold else 0.0 for acc in raw_lin_acc]
+
+    # Low-pass filter
+    alpha = 0.3
+    filtered_lin_acc = [
+        alpha * raw_lin_acc[i] + (1 - alpha) * filtered_lin_acc[i]
+        for i in range(3)
+    ]
+
+    # # Update previous values
+    # prev_lin_vel = list(lin_vel)
+    # prev_time_lin = current_time
+
+    return filtered_lin_acc  # [ax, ay, az] filtered
+
+
 def get_current_time_in_milliseconds() -> int:
     """Returns the current time of day in milliseconds (since midnight)."""
     now = datetime.now()
@@ -857,10 +898,11 @@ def transmit_loop():
                     g_long = g_lat = g_vert = 0.0
                     acc_roll = acc_pitch = acc_yaw = 0.0
                 else:
-                    g_long = physics_data.acc_g[2] * 9.81
-                    g_lat = physics_data.acc_g[0] * 9.81
-                    g_vert = physics_data.acc_g[1] * 9.81
+                    # Filtered angular acceleration
                     acc_pitch, acc_yaw, acc_roll = get_angular_acceleration_demand(physics_data)
+
+                    # Filtered linear accelerations
+                    g_long, g_lat, g_vert = get_linear_acceleration_demand(physics_data)
 
                 # Construct tx buffer using namedTuple (TwinCAT format)
                 txbuf = TelemetryData(
@@ -999,8 +1041,9 @@ def receive_loop():
 
             pulse_rx_activity_light()
 
-            received_tot = received_data.TransmitTimeTenMs / 10.0  # undo the 10x factor in the transmit loop
-            round_trip_time = current_time_ms - received_tot
+            # received_tot = received_data.TransmitTimeTenMs / 10.0  # undo the 10x factor in the transmit loop
+            # round_trip_time = current_time_ms - received_tot
+            round_trip_time = "None"
 
             rx_timestamp_label.config(text=f"Timestamp: {timestamp / 1000}s")
             csv_rx_logger.log(received_data, [current_time_ms, round_trip_time])
@@ -1020,7 +1063,7 @@ def start():
     transmit_thread = threading.Thread(target=transmit_loop, daemon=True)
     transmit_thread.start()
     receive_thread = threading.Thread(target=receive_loop, daemon=True)
-    receive_thread.start()
+    # receive_thread.start()
 
 
 # noinspection PyGlobalUndefined
