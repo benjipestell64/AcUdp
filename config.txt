@@ -21,7 +21,7 @@ launch_wait_time = 10
 MotionConsent = 1
 NSimRequest = 0
 SteeringTorqueEnableRequest = 1
-TorqueMultiplier = 1.0
+TorqueMultiplier = 0.0
 
 [WashoutSettings]
 rWashoutLong = 0.5
