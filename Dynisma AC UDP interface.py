@@ -12,7 +12,7 @@ from ac_udp.packet_spec import load_packet_spec
 from ac_udp.csv_logger import CSVLogger
 from ac_udp.ac_shared_memory import (AC_PHYSICS_MEMORY_NAME, PHYSICS_DATA_SIZE, PhysicsData, get_physics_headers,
                                      find_similar_windows, is_ac_running, open_shared_memory, physics_to_row,
-                                     row_to_physics)
+                                     row_to_physics, shared_memory_exists)
 from ac_udp.motion_cues import get_angular_acceleration_demand, get_linear_acceleration_demand
 from ac_udp.utils import attach_console, get_current_time_in_milliseconds, resource_path
 
@@ -55,6 +55,9 @@ launch_wait_time = config.getint('Processing', 'launch_wait_time')
 game_window_titles = tuple(title.strip() for title in config.get(
     'Processing', 'game_window_titles',
     fallback=DEFAULT_SETTINGS['Processing']['game_window_titles']).split(',') if title.strip())
+game_process_names = tuple(name.strip() for name in config.get(
+    'Processing', 'game_process_names',
+    fallback=DEFAULT_SETTINGS['Processing']['game_process_names']).split(',') if name.strip())
 
 # Read model constants
 modelConstants = {key: (int(value) if value.isdigit() else float(value)) for key, value in
@@ -77,6 +80,8 @@ except Exception as e:
     from tkinter import messagebox
     messagebox.showerror("Packet spec error", f"Could not load packet spec '{PACKET_SPEC_FILE}':\n\n{e}")
     sys.exit(1)
+
+APP_WINDOW_TITLE = f"Assetto Corsa UDP Interface - {PACKET_DESCRIPTION}"
 
 # Packet field names, used for CSV headers
 TelemetryData = TX_SPEC.tuple
@@ -152,12 +157,13 @@ def transmit_loop():
 
         ac_was_running = True
         reported_windows = None
-        while not is_ac_running(game_window_titles):
+        while not is_ac_running(game_window_titles, game_process_names):
             searching_for_assetto()
             # Show near-miss window titles so game_window_titles can be corrected in config.txt
-            similar_windows = find_similar_windows()
-            if similar_windows and similar_windows != reported_windows:
-                print(f"Looking for {list(game_window_titles)}; open windows mentioning Assetto: {similar_windows}")
+            similar_windows = find_similar_windows(exclude=(APP_WINDOW_TITLE,))
+            if similar_windows != reported_windows:
+                print(f"Looking for processes {list(game_process_names)} or windows {list(game_window_titles)}; "
+                      f"similar open windows: {[repr(title) for title in similar_windows]}")
                 reported_windows = similar_windows
             time.sleep(1)
             ac_was_running = False
@@ -170,6 +176,14 @@ def transmit_loop():
         running = True
 
         print("Assetto Corsa running.")
+        if not playback:
+            if shared_memory_exists(AC_PHYSICS_MEMORY_NAME):
+                print(f"Shared memory {AC_PHYSICS_MEMORY_NAME} found.")
+            else:
+                print(f"Shared memory {AC_PHYSICS_MEMORY_NAME} has not been created by the game yet "
+                      f"(it may only appear once you are on a stage).")
+        last_new_packet_time = time.time()
+        stale_reported = False
 
         check_counter = 0
         ac_running_cached = True  # assume running at this point
@@ -177,7 +191,7 @@ def transmit_loop():
         while running and ac_running_cached:
             # Reduce the frequency of checking if AC is running
             if check_counter == 0:
-                ac_running_cached = is_ac_running(game_window_titles)
+                ac_running_cached = is_ac_running(game_window_titles, game_process_names)
                 check_counter = 100  # reset counter
             else:
                 check_counter -= 1
@@ -221,6 +235,11 @@ def transmit_loop():
 
             # If new data is available, assemble and send it
             if physics_data.packet_id != last_packet_id:
+                if stale_reported or last_packet_id == -1:
+                    print(f"Receiving physics data (packet_id {physics_data.packet_id}, "
+                          f"speed {physics_data.speed_kmh:.1f} km/h).")
+                last_new_packet_time = time.time()
+                stale_reported = False
                 set_tx_activity_light(True)  # Activity light on
                 last_packet_id = physics_data.packet_id
                 heartbeat = not heartbeat  # Beat heart
@@ -283,6 +302,11 @@ def transmit_loop():
             else:
                 # No new data
                 set_tx_activity_light(False)
+                if not stale_reported and time.time() - last_new_packet_time > 5:
+                    print(f"No new physics data for 5 s (packet_id stuck at {physics_data.packet_id}). "
+                          f"Is the game paused or in a menu? Shared memory present: "
+                          f"{shared_memory_exists(AC_PHYSICS_MEMORY_NAME)}")
+                    stale_reported = True
 
 
 # noinspection PyGlobalUndefined,PyTypeChecker
@@ -481,7 +505,7 @@ def waiting_for_launch(seconds_remaining=None):
 
 
 root = tk.Tk()
-root.title(f"Assetto Corsa UDP Interface - {PACKET_DESCRIPTION}")
+root.title(APP_WINDOW_TITLE)
 root.iconbitmap(resource_path("dynisma.ico"))
 
 frame = ttk.Frame(root, padding=10)

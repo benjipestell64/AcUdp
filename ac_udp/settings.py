@@ -25,7 +25,8 @@ DEFAULT_SETTINGS = {
     'Processing': {
         'read_graphics_telemetry': 'False',
         'launch_wait_time': '10',
-        'game_window_titles': 'Assetto Corsa, Assetto Corsa Rally'
+        'game_window_titles': 'Assetto Corsa, Assetto Corsa Rally',
+        'game_process_names': 'acs.exe, acr.exe'
     },
     'ModelConstants': {
         'MotionConsent': '1',

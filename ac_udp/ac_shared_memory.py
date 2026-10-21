@@ -11,18 +11,70 @@ AC_PHYSICS_MEMORY_NAME = "Local\\acpmf_physics"
 AC_GRAPHICS_MEMORY_NAME = "Local\\acpmf_graphics"
 
 
-# Window titles of games that publish the acpmf_* shared memory (AC Rally uses the same layout)
+# Games that publish the acpmf_* shared memory (AC Rally uses the same layout)
 DEFAULT_GAME_WINDOW_TITLES = ("Assetto Corsa", "Assetto Corsa Rally")
+DEFAULT_GAME_PROCESS_NAMES = ("acs.exe", "acr.exe")
 
 
-# Check if a supported game window is open
-def is_ac_running(window_titles=DEFAULT_GAME_WINDOW_TITLES):
-    return any(title in window_titles for title in gw.getAllTitles())
+class _ProcessEntry32(ctypes.Structure):
+    _fields_ = [
+        ("dwSize", ctypes.c_ulong),
+        ("cntUsage", ctypes.c_ulong),
+        ("th32ProcessID", ctypes.c_ulong),
+        ("th32DefaultHeapID", ctypes.c_size_t),
+        ("th32ModuleID", ctypes.c_ulong),
+        ("cntThreads", ctypes.c_ulong),
+        ("th32ParentProcessID", ctypes.c_ulong),
+        ("pcPriClassBase", ctypes.c_long),
+        ("dwFlags", ctypes.c_ulong),
+        ("szExeFile", ctypes.c_wchar * 260),
+    ]
 
 
-def find_similar_windows(keyword="assetto"):
-    """Return open window titles containing keyword, to help configure game_window_titles."""
-    return [title for title in gw.getAllTitles() if keyword in title.lower()]
+def get_running_process_names():
+    """Return the lower-cased exe names of all running processes."""
+    kernel32 = ctypes.windll.kernel32
+    kernel32.CreateToolhelp32Snapshot.restype = ctypes.c_void_p
+    snapshot = kernel32.CreateToolhelp32Snapshot(0x00000002, 0)  # TH32CS_SNAPPROCESS
+    if snapshot in (None, ctypes.c_void_p(-1).value):
+        return set()
+    names = set()
+    entry = _ProcessEntry32()
+    entry.dwSize = ctypes.sizeof(_ProcessEntry32)
+    try:
+        ok = kernel32.Process32FirstW(ctypes.c_void_p(snapshot), ctypes.byref(entry))
+        while ok:
+            names.add(entry.szExeFile.lower())
+            ok = kernel32.Process32NextW(ctypes.c_void_p(snapshot), ctypes.byref(entry))
+    finally:
+        kernel32.CloseHandle(ctypes.c_void_p(snapshot))
+    return names
+
+
+# Check if a supported game is running, by process name or window title
+def is_ac_running(window_titles=DEFAULT_GAME_WINDOW_TITLES, process_names=DEFAULT_GAME_PROCESS_NAMES):
+    wanted = {name.strip().lower() for name in process_names}
+    if wanted & get_running_process_names():
+        return True
+    wanted_titles = {title.strip().lower() for title in window_titles}
+    return any(title.strip().lower() in wanted_titles for title in gw.getAllTitles())
+
+
+def shared_memory_exists(name):
+    """True if something (normally the game) has already created the named shared memory."""
+    kernel32 = ctypes.windll.kernel32
+    kernel32.OpenFileMappingW.restype = ctypes.c_void_p
+    handle = kernel32.OpenFileMappingW(0x0004, False, name)  # FILE_MAP_READ
+    if not handle:
+        return False
+    kernel32.CloseHandle(ctypes.c_void_p(handle))
+    return True
+
+
+def find_similar_windows(keywords=("assetto", "corsa", "rally", "acr"), exclude=()):
+    """Return open window titles containing any keyword, to help configure game_window_titles."""
+    return [title for title in gw.getAllTitles()
+            if title not in exclude and any(keyword in title.lower() for keyword in keywords)]
 
 
 def open_shared_memory(name, size, retries=3, delay=2):
