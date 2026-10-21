@@ -9,6 +9,15 @@ enabled = True
 ip = 127.0.0.1
 port = 4242
 
+[MotionFilters]
+; Low-pass cutoffs (Hz) on the motion demands. Lower = smoother but laggier, 0 = no filtering
+angular_roll_hz = 5
+angular_pitch_hz = 5
+angular_yaw_hz = 3
+linear_long_hz = 15
+linear_lat_hz = 15
+linear_vert_hz = 15
+
 [ScreenTransform]
 ; Screen is fixed in the room, the driver moves with the platform: render from the eye, aimed at the screen centre
 enabled = True

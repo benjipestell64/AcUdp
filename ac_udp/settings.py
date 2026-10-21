@@ -17,6 +17,10 @@ DEFAULT_SETTINGS = {
         'ip': '127.0.0.1',
         'port': '4242'
     },
+    'MotionFilters': {
+        'angular_roll_hz': '5', 'angular_pitch_hz': '5', 'angular_yaw_hz': '3',
+        'linear_long_hz': '15', 'linear_lat_hz': '15', 'linear_vert_hz': '15'
+    },
     'ScreenTransform': {
         'enabled': 'True',
         'screen_distance_mm': '1500',

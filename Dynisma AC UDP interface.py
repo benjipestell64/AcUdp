@@ -13,7 +13,7 @@ from ac_udp.csv_logger import CSVLogger
 from ac_udp.ac_shared_memory import (AC_PHYSICS_MEMORY_NAME, PHYSICS_DATA_SIZE, PhysicsData, get_physics_headers,
                                      find_similar_windows, is_ac_running, open_shared_memory, physics_to_row,
                                      row_to_physics, shared_memory_exists)
-from ac_udp.motion_cues import get_angular_acceleration_demand, get_linear_acceleration_demand
+from ac_udp.motion_cues import get_angular_acceleration_demand, get_linear_acceleration_demand, set_filter_cutoffs
 from ac_udp.screen_transform import ScreenGeometry, view_pose
 from ac_udp.utils import attach_console, get_current_time_in_milliseconds, resource_path
 
@@ -89,16 +89,32 @@ def read_screen_geometry(tuning_config):
         eye_offset_m=(get_mm('eye_offset_long_mm'), get_mm('eye_offset_lat_mm'), get_mm('eye_offset_vert_mm')))
 
 
+def read_filter_cutoffs(tuning_config):
+    """Read the [MotionFilters] low-pass cutoffs (Hz)."""
+    return {key: float(tuning_config.get('MotionFilters', key, fallback=default))
+            for key, default in DEFAULT_SETTINGS['MotionFilters'].items()}
+
+
+def apply_filter_cutoffs(cutoffs):
+    set_filter_cutoffs(
+        angular=(cutoffs['angular_roll_hz'], cutoffs['angular_pitch_hz'], cutoffs['angular_yaw_hz']),
+        linear=(cutoffs['linear_long_hz'], cutoffs['linear_lat_hz'], cutoffs['linear_vert_hz']))
+
+
 def read_tuning(tuning_config):
-    """Read the washout settings, steady state gains and screen geometry, which can be reloaded while running."""
+    """
+    Read the washout settings, steady state gains, motion filter cutoffs and screen geometry, which can all be
+    reloaded while running.
+    """
     washout = {key: float(value) for key, value in tuning_config.items('WashoutSettings')}
     gains = {key: float(tuning_config.get('SteadyStateGains', key, fallback=default))
              for key, default in DEFAULT_SETTINGS['SteadyStateGains'].items()}
-    return washout, gains, read_screen_geometry(tuning_config)
+    return washout, gains, read_filter_cutoffs(tuning_config), read_screen_geometry(tuning_config)
 
 
-# Read washout settings, steady state gains and screen geometry
-washoutSettings, steadyStateGains, screen_geometry = read_tuning(config)
+# Read washout settings, steady state gains, motion filter cutoffs and screen geometry
+washoutSettings, steadyStateGains, filterCutoffs, screen_geometry = read_tuning(config)
+apply_filter_cutoffs(filterCutoffs)
 
 # Adjust IP if TRANSMIT_TO_SELF is True
 if TRANSMIT_TO_SELF:
@@ -520,20 +536,23 @@ def stop():
 
 
 def reload_washouts():
-    """Re-read washout settings, steady state gains and screen geometry from config.txt without restarting."""
+    """Re-read washouts, gains, filter cutoffs and screen geometry from config.txt without restarting."""
     global screen_geometry
     try:
-        new_washout, new_gains, new_geometry = read_tuning(load_config())
+        new_washout, new_gains, new_cutoffs, new_geometry = read_tuning(load_config())
     except Exception as e:
         from tkinter import messagebox
         messagebox.showerror("Reload failed", f"Could not read {CONFIG_FILE}; keeping current values.\n\n{e}")
         return
     changes = [f"{key}: {old.get(key)} -> {value}"
-               for old, new in ((washoutSettings, new_washout), (steadyStateGains, new_gains))
+               for old, new in ((washoutSettings, new_washout), (steadyStateGains, new_gains),
+                                (filterCutoffs, new_cutoffs))
                for key, value in new.items() if old.get(key) != value]
     # Update in place (no clear, so the transmit loop never sees a missing key) for the next packet
     washoutSettings.update(new_washout)
     steadyStateGains.update(new_gains)
+    filterCutoffs.update(new_cutoffs)
+    apply_filter_cutoffs(filterCutoffs)
     if new_geometry != screen_geometry:
         changes.append(f"screen: {new_geometry}")
     screen_geometry = new_geometry  # Single assignment, picked up by the receive thread on its next packet
