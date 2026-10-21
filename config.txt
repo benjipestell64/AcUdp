@@ -22,7 +22,7 @@ linear_lat_hz = 15
 linear_vert_hz = 15
 
 [ScreenTransform]
-; Screen is fixed in the room, the driver moves with the platform: render from the eye, aimed at the screen centre
+; Screen is fixed in the room, the cockpit moves: keep the image consistent with the cockpit, aimed at the screen centre
 enabled = True
 screen_distance_mm = 1500
 ; Driver's eye relative to the platform pose reference point (forward, left, up)
