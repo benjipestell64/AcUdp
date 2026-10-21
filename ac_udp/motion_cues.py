@@ -4,7 +4,7 @@ import time
 
 # Define global state variables
 prev_ang_vel = [0.0, 0.0, 0.0]
-prev_time = time.time()
+prev_time = time.perf_counter()
 filtered_ang_acc = [0.0, 0.0, 0.0]  # Low-pass filtered angular acceleration
 
 
@@ -13,7 +13,9 @@ def get_angular_acceleration_demand(physics_data):
 
     # Current angular velocity (rad/s)
     ang_vel = physics_data.local_angular_vel
-    current_time = time.time()
+    # perf_counter, not time.time: on Windows time.time can tick in 1-15.6 ms steps, which is coarser than
+    # AC's ~3 ms physics step, so dt (and the differentiated acceleration) would jump around
+    current_time = time.perf_counter()
     dt = current_time - prev_time
 
     if dt <= 0.0001:
@@ -45,7 +47,7 @@ def get_angular_acceleration_demand(physics_data):
 
 prev_lin_vel = [0.0, 0.0, 0.0]
 filtered_lin_acc = [0.0, 0.0, 0.0]
-prev_time_lin = time.time()
+prev_time_lin = time.perf_counter()
 
 
 def get_linear_acceleration_demand(physics_data):
@@ -53,7 +55,7 @@ def get_linear_acceleration_demand(physics_data):
 
     # # Current linear velocity (m/s) — change to whatever your API uses
     # lin_vel = physics_data.local_velocity  # e.g. [vx, vy, vz]
-    # current_time = time.time()
+    # current_time = time.perf_counter()
     # dt = current_time - prev_time_lin
     # if dt <= 0.0001:
     #     dt = 0.001
