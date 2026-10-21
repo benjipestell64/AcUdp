@@ -81,14 +81,14 @@
   },
   "forward": {
     "byte_order": "<",
-    "comment": "OpenTrack 'UDP over network' input: 6 doubles, x/y/z in cm then yaw/pitch/roll in degrees. Invert axes in OpenTrack if needed",
+    "comment": "OpenTrack 'UDP over network' input: 6 doubles, x/y/z in cm then yaw/pitch/roll in degrees. 'view' is the camera pose for the world-fixed screen ([ScreenTransform] in config.txt; the raw platform pose when disabled). Invert axes in OpenTrack if needed",
     "fields": [
-      {"name": "x",     "type": "LREAL", "value": "xLatWorld * 100"},
-      {"name": "y",     "type": "LREAL", "value": "xVertWorld * 100"},
-      {"name": "z",     "type": "LREAL", "value": "xLongWorld * 100"},
-      {"name": "yaw",   "type": "LREAL", "value": "math.degrees(aYawWorld)"},
-      {"name": "pitch", "type": "LREAL", "value": "math.degrees(aPitchWorld)"},
-      {"name": "roll",  "type": "LREAL", "value": "math.degrees(aRollWorld)"}
+      {"name": "x",     "type": "LREAL", "value": "view['lat_m'] * 100"},
+      {"name": "y",     "type": "LREAL", "value": "view['vert_m'] * 100"},
+      {"name": "z",     "type": "LREAL", "value": "view['long_m'] * 100"},
+      {"name": "yaw",   "type": "LREAL", "value": "math.degrees(view['yaw_rad'])"},
+      {"name": "pitch", "type": "LREAL", "value": "math.degrees(view['pitch_rad'])"},
+      {"name": "roll",  "type": "LREAL", "value": "math.degrees(view['roll_rad'])"}
     ]
   }
 }

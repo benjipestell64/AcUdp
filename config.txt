@@ -12,6 +12,15 @@ enabled = True
 ip = 127.0.0.1
 port = 4242
 
+[ScreenTransform]
+; Screen is fixed in the room, the driver moves with the platform: render from the eye, aimed at the screen centre
+enabled = True
+screen_distance_mm = 1500
+; Driver's eye relative to the platform pose reference point (forward, left, up)
+eye_offset_long_mm = 0
+eye_offset_lat_mm = 0
+eye_offset_vert_mm = 0
+
 [Debug]
 debug_output = False
 

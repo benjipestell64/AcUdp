@@ -14,6 +14,7 @@ from ac_udp.ac_shared_memory import (AC_PHYSICS_MEMORY_NAME, PHYSICS_DATA_SIZE, 
                                      find_similar_windows, is_ac_running, open_shared_memory, physics_to_row,
                                      row_to_physics, shared_memory_exists)
 from ac_udp.motion_cues import get_angular_acceleration_demand, get_linear_acceleration_demand
+from ac_udp.screen_transform import ScreenGeometry, view_pose
 from ac_udp.utils import attach_console, get_current_time_in_milliseconds, resource_path
 
 # from receive import NSimRequest
@@ -75,16 +76,29 @@ last_spec_signals = None  # Signals used for the last transmitted packet
 
 
 
+def read_screen_geometry(tuning_config):
+    """Read the [ScreenTransform] settings (mm in config.txt, metres here)."""
+    defaults = DEFAULT_SETTINGS['ScreenTransform']
+
+    def get_mm(key):
+        return float(tuning_config.get('ScreenTransform', key, fallback=defaults[key])) / 1000
+
+    return ScreenGeometry(
+        enabled=tuning_config.getboolean('ScreenTransform', 'enabled', fallback=defaults['enabled'] == 'True'),
+        screen_distance_m=get_mm('screen_distance_mm'),
+        eye_offset_m=(get_mm('eye_offset_long_mm'), get_mm('eye_offset_lat_mm'), get_mm('eye_offset_vert_mm')))
+
+
 def read_tuning(tuning_config):
-    """Read the washout settings and steady state gains, which can be reloaded while running."""
+    """Read the washout settings, steady state gains and screen geometry, which can be reloaded while running."""
     washout = {key: float(value) for key, value in tuning_config.items('WashoutSettings')}
     gains = {key: float(tuning_config.get('SteadyStateGains', key, fallback=default))
              for key, default in DEFAULT_SETTINGS['SteadyStateGains'].items()}
-    return washout, gains
+    return washout, gains, read_screen_geometry(tuning_config)
 
 
-# Read washout settings and steady state gains
-washoutSettings, steadyStateGains = read_tuning(config)
+# Read washout settings, steady state gains and screen geometry
+washoutSettings, steadyStateGains, screen_geometry = read_tuning(config)
 
 # Adjust IP if TRANSMIT_TO_SELF is True
 if TRANSMIT_TO_SELF:
@@ -409,7 +423,11 @@ def receive_loop():
 
         if forward_sock:
             try:
-                forward_packet = FORWARD_SPEC.build(received_data._asdict())
+                # Camera pose for the world-fixed screen, available to the forward spec as view['...']
+                view = view_pose(screen_geometry, received_data.xLongWorld, received_data.xLatWorld,
+                                 received_data.xVertWorld, received_data.aRollWorld, received_data.aPitchWorld,
+                                 received_data.aYawWorld)
+                forward_packet = FORWARD_SPEC.build(dict(received_data._asdict(), view=view))
                 forward_sock.sendto(FORWARD_SPEC.pack(forward_packet), (OPENTRACK_IP, OPENTRACK_PORT))
                 forward_error_reported = False
             except (OSError, ValueError) as e:
@@ -502,9 +520,10 @@ def stop():
 
 
 def reload_washouts():
-    """Re-read washout settings and steady state gains from config.txt without restarting."""
+    """Re-read washout settings, steady state gains and screen geometry from config.txt without restarting."""
+    global screen_geometry
     try:
-        new_washout, new_gains = read_tuning(load_config())
+        new_washout, new_gains, new_geometry = read_tuning(load_config())
     except Exception as e:
         from tkinter import messagebox
         messagebox.showerror("Reload failed", f"Could not read {CONFIG_FILE}; keeping current values.\n\n{e}")
@@ -515,6 +534,9 @@ def reload_washouts():
     # Update in place (no clear, so the transmit loop never sees a missing key) for the next packet
     washoutSettings.update(new_washout)
     steadyStateGains.update(new_gains)
+    if new_geometry != screen_geometry:
+        changes.append(f"screen: {new_geometry}")
+    screen_geometry = new_geometry  # Single assignment, picked up by the receive thread on its next packet
     print("Reloaded washouts / gains:", "; ".join(changes) if changes else "no changes")
 
 
