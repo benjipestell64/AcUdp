@@ -45,3 +45,8 @@ zetaWashoutRoll = 4
 zetaWashoutPitch = 3
 zetaWashoutYaw = 2
 
+
+[SteadyStateGains]
+aRoll = 0.3
+aPitch = 0.3
+aYaw = 0

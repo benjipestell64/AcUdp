@@ -57,9 +57,9 @@
       {"name": "xLongExternalCueing",  "type": "REAL", "value": 0.0},
       {"name": "xLatExternalCueing",   "type": "REAL", "value": 0.0},
       {"name": "xVertExternalCueing",  "type": "REAL", "value": 0.0},
-      {"name": "aRollExternalCueing",  "type": "REAL", "value": "physics_data.roll * -1 * 0.5"},
-      {"name": "aPitchExternalCueing", "type": "REAL", "value": "physics_data.pitch * -1 * 0.4"},
-      {"name": "aYawExternalCueing",   "type": "REAL", "value": "physics_data.heading * -1 * 0"},
+      {"name": "aRollExternalCueing",  "type": "REAL", "value": "physics_data.roll * -1 * steadyStateGains['aRoll']"},
+      {"name": "aPitchExternalCueing", "type": "REAL", "value": "physics_data.pitch * -1 * steadyStateGains['aPitch']"},
+      {"name": "aYawExternalCueing",   "type": "REAL", "value": "physics_data.heading * -1 * steadyStateGains['aYaw']"},
 
       {"name": "vLongCar",  "type": "REAL", "value": "physics_data.speed_kmh / 3.6"},
       {"name": "NMSteer",   "type": "REAL", "value": "int(physics_data.final_ff * modelConstants['TorqueMultiplier'])"},

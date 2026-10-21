@@ -66,8 +66,18 @@ modelConstants = {key: (int(value) if value.isdigit() else float(value)) for key
 nSimRequest = modelConstants['NSimRequest']
 last_spec_signals = None  # Signals used for the last transmitted packet
 
-# Read washout settings
-washoutSettings = {key: float(value) for key, value in config.items('WashoutSettings')}
+
+
+def read_tuning(tuning_config):
+    """Read the washout settings and steady state gains, which can be reloaded while running."""
+    washout = {key: float(value) for key, value in tuning_config.items('WashoutSettings')}
+    gains = {key: float(tuning_config.get('SteadyStateGains', key, fallback=default))
+             for key, default in DEFAULT_SETTINGS['SteadyStateGains'].items()}
+    return washout, gains
+
+
+# Read washout settings and steady state gains
+washoutSettings, steadyStateGains = read_tuning(config)
 
 # Adjust IP if TRANSMIT_TO_SELF is True
 if TRANSMIT_TO_SELF:
@@ -263,6 +273,7 @@ def transmit_loop():
                     "g_long": g_long, "g_lat": g_lat, "g_vert": g_vert,
                     "acc_roll": acc_roll, "acc_pitch": acc_pitch, "acc_yaw": acc_yaw,
                     "washoutSettings": washoutSettings,
+                    "steadyStateGains": steadyStateGains,
                     "modelConstants": modelConstants,
                     "time_ms": get_current_time_in_milliseconds(),
                 }
@@ -422,6 +433,23 @@ def stop():
     set_tx_activity_light(False)
 
 
+def reload_washouts():
+    """Re-read washout settings and steady state gains from config.txt without restarting."""
+    try:
+        new_washout, new_gains = read_tuning(load_config())
+    except Exception as e:
+        from tkinter import messagebox
+        messagebox.showerror("Reload failed", f"Could not read {CONFIG_FILE}; keeping current values.\n\n{e}")
+        return
+    changes = [f"{key}: {old.get(key)} -> {value}"
+               for old, new in ((washoutSettings, new_washout), (steadyStateGains, new_gains))
+               for key, value in new.items() if old.get(key) != value]
+    # Update in place (no clear, so the transmit loop never sees a missing key) for the next packet
+    washoutSettings.update(new_washout)
+    steadyStateGains.update(new_gains)
+    print("Reloaded washouts / gains:", "; ".join(changes) if changes else "no changes")
+
+
 def toggle_record():
     global recording, recorded_data
     prev_packet_id = None
@@ -562,8 +590,11 @@ open_tx_log_button.grid(row=4, column=2, columnspan=1, padx=0, pady=5, sticky="e
 open_rx_log_button = ttk.Button(frame, text="Open", width=5, command=lambda: os.system(f"start {rx_csv_file}"))
 open_rx_log_button.grid(row=4, column=5, columnspan=1, padx=0, pady=5, sticky="e")
 
-config_button = ttk.Button(frame, text="Configure ⚙️", width=50, command=lambda: os.system(f"start {CONFIG_FILE}"))
-config_button.grid(row=6, column=0, columnspan=8, padx=10, pady=5)
+config_button = ttk.Button(frame, text="Configure ⚙️", width=25, command=lambda: os.system(f"start {CONFIG_FILE}"))
+config_button.grid(row=6, column=0, columnspan=4, padx=5, pady=5)
+
+reload_button = ttk.Button(frame, text="Reload washouts / gains", width=25, command=reload_washouts)
+reload_button.grid(row=6, column=4, columnspan=4, padx=5, pady=5)
 
 start_button = ttk.Button(frame, text="Start", width=25, command=start)
 start_button.grid(row=7, column=0, columnspan=4, padx=5, pady=5)

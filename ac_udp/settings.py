@@ -41,6 +41,9 @@ DEFAULT_SETTINGS = {
         'fWashoutRoll': '1.5', 'fWashoutPitch': '1.5', 'fWashoutYaw': '0.5',
         'zetaWashoutLong': '3', 'zetaWashoutLat': '2', 'zetaWashoutVert': '4',
         'zetaWashoutRoll': '4', 'zetaWashoutPitch': '3', 'zetaWashoutYaw': '2'
+    },
+    'SteadyStateGains': {
+        'aRoll': '0.3', 'aPitch': '0.3', 'aYaw': '0'
     }
 }
 
