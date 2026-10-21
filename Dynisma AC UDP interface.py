@@ -85,8 +85,8 @@ def read_screen_geometry(tuning_config):
 
     return ScreenGeometry(
         enabled=tuning_config.getboolean('ScreenTransform', 'enabled', fallback=defaults['enabled'] == 'True'),
-        screen_distance_m=get_mm('screen_distance_mm'),
-        eye_offset_m=(get_mm('eye_offset_long_mm'), get_mm('eye_offset_lat_mm'), get_mm('eye_offset_vert_mm')))
+        screen_offset_m=(get_mm('screen_offset_long_mm'), get_mm('screen_offset_lat_mm'),
+                         get_mm('screen_offset_vert_mm')))
 
 
 def read_filter_cutoffs(tuning_config):

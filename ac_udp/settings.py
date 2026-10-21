@@ -23,10 +23,9 @@ DEFAULT_SETTINGS = {
     },
     'ScreenTransform': {
         'enabled': 'True',
-        'screen_distance_mm': '1500',
-        'eye_offset_long_mm': '0',
-        'eye_offset_lat_mm': '0',
-        'eye_offset_vert_mm': '0'
+        'screen_offset_long_mm': '1500',
+        'screen_offset_lat_mm': '0',
+        'screen_offset_vert_mm': '0'
     },
     'Debug': {
         'debug_output': 'False'

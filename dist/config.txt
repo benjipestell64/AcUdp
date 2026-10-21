@@ -19,13 +19,12 @@ linear_lat_hz = 15
 linear_vert_hz = 15
 
 [ScreenTransform]
-; Screen is fixed in the room, the cockpit moves: keep the image consistent with the cockpit, aimed at the screen centre
+; Camera follows the platform 1:1, from a point fixed to the platform at the screen (so rotation adds translation)
 enabled = True
-screen_distance_mm = 1500
-; Driver's eye relative to the platform pose reference point (forward, left, up)
-eye_offset_long_mm = 0
-eye_offset_lat_mm = 0
-eye_offset_vert_mm = 0
+; Screen relative to the platform centre (forward, left, up)
+screen_offset_long_mm = 1500
+screen_offset_lat_mm = 0
+screen_offset_vert_mm = 0
 
 [Debug]
 debug_output = False
