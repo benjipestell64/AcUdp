@@ -1,0 +1,90 @@
+{
+  "description": "DMG-S TwinCAT interface",
+  "transmit": {
+    "byte_order": ">",
+    "fields": [
+      {"name": "MotionConsent",               "type": "USINT", "value": "modelConstants['MotionConsent']"},
+      {"name": "SimulationRunningHeartbeat",  "type": "USINT", "value": "heartbeat"},
+      {"name": "NSimRequest",                 "type": "SINT",  "value": "nSimRequest"},
+      {"name": "SteeringTorqueEnableRequest", "type": "USINT", "value": "modelConstants['SteeringTorqueEnableRequest']"},
+      {"name": "BResetAvailable",             "type": "USINT", "value": 0},
+
+      {"name": "rWashoutLong",  "type": "REAL", "value": "washoutSettings['rWashoutLong']"},
+      {"name": "rWashoutLat",   "type": "REAL", "value": "washoutSettings['rWashoutLat']"},
+      {"name": "rWashoutVert",  "type": "REAL", "value": "washoutSettings['rWashoutVert']"},
+      {"name": "rWashoutRoll",  "type": "REAL", "value": "washoutSettings['rWashoutRoll']"},
+      {"name": "rWashoutPitch", "type": "REAL", "value": "washoutSettings['rWashoutPitch']"},
+      {"name": "rWashoutYaw",   "type": "REAL", "value": "washoutSettings['rWashoutYaw']"},
+
+      {"name": "fWashoutLong",  "type": "REAL", "value": "washoutSettings['fWashoutLong']"},
+      {"name": "fWashoutLat",   "type": "REAL", "value": "washoutSettings['fWashoutLat']"},
+      {"name": "fWashoutVert",  "type": "REAL", "value": "washoutSettings['fWashoutVert']"},
+      {"name": "fWashoutRoll",  "type": "REAL", "value": "washoutSettings['fWashoutRoll']"},
+      {"name": "fWashoutPitch", "type": "REAL", "value": "washoutSettings['fWashoutPitch']"},
+      {"name": "fWashoutYaw",   "type": "REAL", "value": "washoutSettings['fWashoutYaw']"},
+
+      {"name": "zetaWashoutLong",  "type": "REAL", "value": "washoutSettings['zetaWashoutLong']"},
+      {"name": "zetaWashoutLat",   "type": "REAL", "value": "washoutSettings['zetaWashoutLat']"},
+      {"name": "zetaWashoutVert",  "type": "REAL", "value": "washoutSettings['zetaWashoutVert']"},
+      {"name": "zetaWashoutRoll",  "type": "REAL", "value": "washoutSettings['zetaWashoutRoll']"},
+      {"name": "zetaWashoutPitch", "type": "REAL", "value": "washoutSettings['zetaWashoutPitch']"},
+      {"name": "zetaWashoutYaw",   "type": "REAL", "value": "washoutSettings['zetaWashoutYaw']"},
+
+      {"name": "xLongSpeedPreposMin", "type": "REAL", "value": 0.0},
+      {"name": "xLongSpeedPreposMax", "type": "REAL", "value": 0.0},
+      {"name": "vCarSpeedPreposMin",  "type": "REAL", "value": 30.0},
+      {"name": "vCarSpeedPreposMax",  "type": "REAL", "value": 85.0},
+
+      {"name": "rSideSlipCue",  "type": "REAL", "value": 0.0},
+      {"name": "rEngineCue",    "type": "REAL", "value": "physics_data.gas * 0.3 + 0.7"},
+      {"name": "rUpshiftCue",   "type": "REAL", "value": 0.0},
+      {"name": "rDownshiftCue", "type": "REAL", "value": 0.0, "comment": "This is a vector in GT DiL settings: [2, 2, 2, 1, 1, 1]"},
+
+      {"name": "gLongDemand",   "type": "REAL", "value": "g_long * 9.81"},
+      {"name": "gLatDemand",    "type": "REAL", "value": "g_lat * 9.81"},
+      {"name": "gVertDemand",   "type": "REAL", "value": "g_vert * 9.81"},
+      {"name": "dnRollDemand",  "type": "REAL", "value": "acc_roll"},
+      {"name": "dnPitchDemand", "type": "REAL", "value": "acc_pitch"},
+      {"name": "dnYawDemand",   "type": "REAL", "value": "acc_yaw"},
+
+      {"name": "vLongExternalCueing", "type": "REAL", "value": 0.0},
+      {"name": "vLatExternalCueing",  "type": "REAL", "value": 0.0},
+      {"name": "vVertExternalCueing", "type": "REAL", "value": 0.0},
+      {"name": "nRollDemand",   "type": "REAL", "value": "physics_data.local_angular_vel[2] * 0"},
+      {"name": "nPitchDemand",  "type": "REAL", "value": "physics_data.local_angular_vel[0] * 0"},
+      {"name": "nYawDemand",    "type": "REAL", "value": "physics_data.local_angular_vel[1] * 0"},
+
+      {"name": "xLongExternalCueing",  "type": "REAL", "value": 0.0},
+      {"name": "xLatExternalCueing",   "type": "REAL", "value": 0.0},
+      {"name": "xVertExternalCueing",  "type": "REAL", "value": 0.0},
+      {"name": "aRollExternalCueing",  "type": "REAL", "value": "physics_data.roll * -1 * 0.5"},
+      {"name": "aPitchExternalCueing", "type": "REAL", "value": "physics_data.pitch * -1 * 0.4"},
+      {"name": "aYawExternalCueing",   "type": "REAL", "value": "physics_data.heading * -1 * 0"},
+
+      {"name": "vLongCar",  "type": "REAL", "value": "physics_data.speed_kmh / 3.6"},
+      {"name": "NMSteer",   "type": "REAL", "value": "int(physics_data.final_ff * modelConstants['TorqueMultiplier'])"},
+      {"name": "nEngine",   "type": "REAL", "value": "physics_data.rpms * 0.75 * (2 * 3.142 / 60)"},
+      {"name": "NGear",     "type": "REAL", "value": "physics_data.gear - 1"},
+      {"name": "aSlipCue",  "type": "REAL", "value": 0.0},
+      {"name": "nSlipCar",  "type": "REAL", "value": 0.0},
+      {"name": "dnSlipCar", "type": "REAL", "value": 0.0},
+      {"name": "timestamp", "type": "REAL", "value": 0.0}
+    ]
+  },
+  "receive": {
+    "byte_order": "<",
+    "fields": [
+      {"name": "NAMotorSteer", "type": "DINT"}, {"name": "NNMotorSteer", "type": "DINT"},
+      {"name": "gLongChassis", "type": "REAL"}, {"name": "gLatChassis", "type": "REAL"}, {"name": "gVertChassis", "type": "REAL"},
+      {"name": "dnRollChassis", "type": "REAL"}, {"name": "dnPitchChassis", "type": "REAL"}, {"name": "dnYawChassis", "type": "REAL"},
+      {"name": "xLongWorld", "type": "REAL"}, {"name": "xLatWorld", "type": "REAL"}, {"name": "xVertWorld", "type": "REAL"},
+      {"name": "aRollWorld", "type": "REAL"}, {"name": "aPitchWorld", "type": "REAL"}, {"name": "aYawWorld", "type": "REAL"},
+      {"name": "vLongWorld", "type": "REAL"}, {"name": "vLatWorld", "type": "REAL"}, {"name": "vVertWorld", "type": "REAL"},
+      {"name": "nRollWorld", "type": "REAL"}, {"name": "nPitchWorld", "type": "REAL"}, {"name": "nYawWorld", "type": "REAL"},
+      {"name": "xLongDemandWorld", "type": "REAL"}, {"name": "xLatDemandWorld", "type": "REAL"}, {"name": "xVertDemandWorld", "type": "REAL"},
+      {"name": "aRollDemandWorld", "type": "REAL"}, {"name": "aPitchDemandWorld", "type": "REAL"}, {"name": "aYawDemandWorld", "type": "REAL"},
+      {"name": "vLongDemandWorld", "type": "REAL"}, {"name": "vLatDemandWorld", "type": "REAL"}, {"name": "vVertDemandWorld", "type": "REAL"},
+      {"name": "nRollDemandWorld", "type": "REAL"}, {"name": "nPitchDemandWorld", "type": "REAL"}, {"name": "nYawDemandWorld", "type": "REAL"}
+    ]
+  }
+}

@@ -1,0 +1,62 @@
+{
+    "cues": {
+        "downshift": 0.0,
+        "engine": 0.5,
+        "sideslip": 0.0,
+        "upshift": 0.0
+    },
+    "offset": {
+        "lat": 0.0,
+        "lon": -0.5,
+        "suppressYaw": false,
+        "vert": -0.55
+    },
+    "preposition": {
+        "sLong": {
+            "max": 0.0,
+            "min": 0.0
+        },
+        "vCarLong": {
+            "max": 85,
+            "min": 35
+        }
+    },
+    "udp": {
+        "rxPos": {
+            "port": 10000
+        },
+        "rxState": {
+            "port": 10000
+        },
+        "tx": {
+            "ip": "169.254.240.116",
+            "port": 10000
+        }
+    },
+    "washout": {
+        "f": {
+            "lat": 1.6,
+            "long": 2.5,
+            "pitch": 2,
+            "roll": 2,
+            "vert": 2.5,
+            "yaw": 0.8
+        },
+        "r": {
+            "lat": 3,
+            "long": 6,
+            "pitch": 0.07,
+            "roll": 0.07,
+            "vert": 4,
+            "yaw": 0.05
+        },
+        "z": {
+            "lat": 1.5,
+            "long": 1.5,
+            "pitch": 1,
+            "roll": 1,
+            "vert": 1.5,
+            "yaw": 0.9
+        }
+    }
+}

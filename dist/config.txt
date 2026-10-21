@@ -1,5 +1,5 @@
 [Network]
-UDP_IP = 169.254.150.134
+UDP_IP = 192.168.4.10
 UDP_PORT = 10000
 TRANSMIT_TO_SELF = False
 
@@ -16,6 +16,7 @@ rx_csv_file = controller_log.csv
 [Processing]
 read_graphics_telemetry = False
 launch_wait_time = 10
+game_window_titles = Assetto Corsa, Assetto Corsa Rally
 
 [ModelConstants]
 NSimRequest = 1

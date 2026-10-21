@@ -1,0 +1,12 @@
+14:37:48.757 INFO    Packet spec: packets/DMG-1.json (DMG-1 TwinCAT interface)
+14:37:48.758 INFO    Expecting 238 byte packets on 127.0.0.1:10000
+14:37:48.760 INFO    Sending 128 byte packets to 127.0.0.1:10010 at 100 Hz
+14:37:57.476 INFO    First valid packet from 127.0.0.1:53279
+14:38:55.578 INFO    Packet spec: packets/DMG-1.json (DMG-1 TwinCAT interface)
+14:38:55.579 INFO    Expecting 238 byte packets on 192.168.0.1:10000
+14:38:55.580 INFO    Sending 128 byte packets to 192.168.0.2:10010 at 100 Hz
+14:44:38.133 INFO    Stopped. rx=0 bad=0 tx=34245
+14:44:51.411 INFO    Packet spec: packets/DMG-1.json (DMG-1 TwinCAT interface)
+14:44:51.413 INFO    Expecting 238 byte packets on 192.168.0.1:10000
+14:44:51.413 INFO    Sending 128 byte packets to 192.168.0.2:10010 at 1000 Hz
+14:52:18.381 INFO    First valid packet from 192.168.0.2:64927

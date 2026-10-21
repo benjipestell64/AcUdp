@@ -4,10 +4,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5b0847b8-f272-4429-bc39-7b634ed277a5" name="Changes" comment="Drivable state">
+    <list default="true" id="5b0847b8-f272-4429-bc39-7b634ed277a5" name="Changes" comment="Added reduced sender">
+      <change afterPath="$PROJECT_DIR$/Archive/Dynisma AC UDP interface DMG-1.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Archive/Dynisma AC UDP interface DMG-S.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Dynisma AC UDP interface REDUCED.py" beforeDir="false" afterPath="$PROJECT_DIR$/Archive/Dynisma AC UDP interface REDUCED.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Dynisma AC UDP interface.py" beforeDir="false" afterPath="$PROJECT_DIR$/Dynisma AC UDP interface.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.txt" beforeDir="false" afterPath="$PROJECT_DIR$/config.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/config.txt" beforeDir="false" afterPath="$PROJECT_DIR$/dist/config.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/receive.py" beforeDir="false" afterPath="$PROJECT_DIR$/Archive/receive.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/receive_platform_position.py" beforeDir="false" afterPath="$PROJECT_DIR$/Archive/receive_platform_position.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/receive_platform_state.py" beforeDir="false" afterPath="$PROJECT_DIR$/Archive/receive_platform_state.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/status light.py" beforeDir="false" afterPath="$PROJECT_DIR$/Archive/status light.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,28 +56,39 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.Dynisma AC UDP interface.executor": "Run",
-    "Python.Dynisma AC UDP send.executor": "Run",
-    "Python.main.executor": "Run",
-    "Python.receive.executor": "Run",
-    "Python.status light.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "DMG__S",
-    "last_opened_file_path": "C:/Users/benji/PycharmProjects/ACSharedMemoryUDP",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "Errors",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.Dynisma AC UDP interface DMG-1.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Dynisma AC UDP interface DMG-S.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Dynisma AC UDP interface REDUCED.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Dynisma AC UDP interface.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Dynisma AC UDP send.executor&quot;: &quot;Run&quot;,
+    &quot;Python.ipc_emulator.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.receive.executor&quot;: &quot;Run&quot;,
+    &quot;Python.receive_platform.executor&quot;: &quot;Run&quot;,
+    &quot;Python.status light.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;DMG__S&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/benji/PycharmProjects/ACSharedMemoryUDP/packets&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;Errors&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\benji\PycharmProjects\ACSharedMemoryUDP\packets" />
+      <recent name="C:\Users\benji\PycharmProjects\ACSharedMemoryUDP" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\benji\PycharmProjects\ACSharedMemoryUDP\Archive\logs" />
+      <recent name="C:\Users\benji\PycharmProjects\ACSharedMemoryUDP\Archive" />
       <recent name="C:\Users\benji\PycharmProjects\ACSharedMemoryUDP" />
     </key>
   </component>
@@ -178,39 +197,42 @@
       <workItem from="1763375384078" duration="2260000" />
       <workItem from="1765123952475" duration="51000" />
       <workItem from="1765976030032" duration="2792000" />
-      <workItem from="1766057281369" duration="4243000" />
-    </task>
-    <task id="LOCAL-00011" summary="Automatically determine CSV header">
-      <option name="closed" value="true" />
-      <created>1741193049189</created>
-      <option name="number" value="00011" />
-      <option name="presentableId" value="LOCAL-00011" />
-      <option name="project" value="LOCAL" />
-      <updated>1741193049189</updated>
-    </task>
-    <task id="LOCAL-00012" summary="Tidy">
-      <option name="closed" value="true" />
-      <created>1741193322128</created>
-      <option name="number" value="00012" />
-      <option name="presentableId" value="LOCAL-00012" />
-      <option name="project" value="LOCAL" />
-      <updated>1741193322128</updated>
-    </task>
-    <task id="LOCAL-00013" summary="Fix game crashing when script open first">
-      <option name="closed" value="true" />
-      <created>1741259283171</created>
-      <option name="number" value="00013" />
-      <option name="presentableId" value="LOCAL-00013" />
-      <option name="project" value="LOCAL" />
-      <updated>1741259283171</updated>
-    </task>
-    <task id="LOCAL-00014" summary="Fix crashing when game reopened">
-      <option name="closed" value="true" />
-      <created>1741261918706</created>
-      <option name="number" value="00014" />
-      <option name="presentableId" value="LOCAL-00014" />
-      <option name="project" value="LOCAL" />
-      <updated>1741261918706</updated>
+      <workItem from="1766057281369" duration="4866000" />
+      <workItem from="1766137837309" duration="4708000" />
+      <workItem from="1766399604839" duration="3117000" />
+      <workItem from="1766481818356" duration="10000" />
+      <workItem from="1766482064324" duration="1234000" />
+      <workItem from="1767606787010" duration="4601000" />
+      <workItem from="1768397067207" duration="2527000" />
+      <workItem from="1768408157942" duration="12504000" />
+      <workItem from="1768646586721" duration="2813000" />
+      <workItem from="1769177596096" duration="1997000" />
+      <workItem from="1769678016909" duration="10000" />
+      <workItem from="1770631243108" duration="6811000" />
+      <workItem from="1770736149167" duration="709000" />
+      <workItem from="1770824970747" duration="34000" />
+      <workItem from="1771516368635" duration="27000" />
+      <workItem from="1772014431487" duration="1433000" />
+      <workItem from="1772183654451" duration="16000" />
+      <workItem from="1772188330327" duration="1238000" />
+      <workItem from="1772197655369" duration="1935000" />
+      <workItem from="1772200894957" duration="41000" />
+      <workItem from="1775117381286" duration="1585000" />
+      <workItem from="1775576879947" duration="181000" />
+      <workItem from="1775578596070" duration="71000" />
+      <workItem from="1783001424586" duration="1035000" />
+      <workItem from="1783584856647" duration="16000" />
+      <workItem from="1783672920095" duration="4823000" />
+      <workItem from="1783956009572" duration="2195000" />
+      <workItem from="1784103482505" duration="2036000" />
+      <workItem from="1784731655153" duration="943000" />
+      <workItem from="1785313986539" duration="3929000" />
+      <workItem from="1786009086211" duration="2026000" />
+      <workItem from="1791966712562" duration="1970000" />
+      <workItem from="1791970194279" duration="3201000" />
+      <workItem from="1792146187207" duration="14672000" />
+      <workItem from="1792164370899" duration="2894000" />
+      <workItem from="1792411773498" duration="6000" />
     </task>
     <task id="LOCAL-00015" summary="Capture graphics data as well as physics">
       <option name="closed" value="true" />
@@ -572,7 +594,39 @@
       <option name="project" value="LOCAL" />
       <updated>1766058188168</updated>
     </task>
-    <option name="localTasksCounter" value="60" />
+    <task id="LOCAL-00060" summary="Running but untested">
+      <option name="closed" value="true" />
+      <created>1766062215746</created>
+      <option name="number" value="00060" />
+      <option name="presentableId" value="LOCAL-00060" />
+      <option name="project" value="LOCAL" />
+      <updated>1766062215746</updated>
+    </task>
+    <task id="LOCAL-00061" summary="Multiply steering by 0 since torque is handled by simucube">
+      <option name="closed" value="true" />
+      <created>1766149649744</created>
+      <option name="number" value="00061" />
+      <option name="presentableId" value="LOCAL-00061" />
+      <option name="project" value="LOCAL" />
+      <updated>1766149649744</updated>
+    </task>
+    <task id="LOCAL-00062" summary="Working receivers">
+      <option name="closed" value="true" />
+      <created>1766402370737</created>
+      <option name="number" value="00062" />
+      <option name="presentableId" value="LOCAL-00062" />
+      <option name="project" value="LOCAL" />
+      <updated>1766402370738</updated>
+    </task>
+    <task id="LOCAL-00063" summary="Added reduced sender">
+      <option name="closed" value="true" />
+      <created>1766402394337</created>
+      <option name="number" value="00063" />
+      <option name="presentableId" value="LOCAL-00063" />
+      <option name="project" value="LOCAL" />
+      <updated>1766402394337</updated>
+    </task>
+    <option name="localTasksCounter" value="64" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -605,10 +659,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Tidy packet formats" />
-    <MESSAGE value="Handle gear number display" />
-    <MESSAGE value="Update activity symbol" />
-    <MESSAGE value="Update activity symbol ◇" />
     <MESSAGE value="Tidy &amp; document" />
     <MESSAGE value="Latest executable" />
     <MESSAGE value="Tidy" />
@@ -630,27 +680,35 @@
     <MESSAGE value="Working in python - not when compiled though?" />
     <MESSAGE value="Added filtering to reduce noise - lost a lot of detial too though" />
     <MESSAGE value="Drivable state" />
-    <option name="LAST_COMMIT_MESSAGE" value="Drivable state" />
+    <MESSAGE value="Running but untested" />
+    <MESSAGE value="Multiply steering by 0 since torque is handled by simucube" />
+    <MESSAGE value="Working receivers" />
+    <MESSAGE value="Added reduced sender" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added reduced sender" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/Dynisma AC UDP interface.py</url>
-          <line>979</line>
-          <option name="timeStamp" value="3" />
+          <url>file://$PROJECT_DIR$/Archive/Dynisma AC UDP interface REDUCED.py</url>
+          <option name="timeStamp" value="1" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/Dynisma_AC_UDP_interface_py$status_light.coverage" NAME="status light Coverage Results" MODIFIED="1758273960406" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/Dynisma_AC_UDP_interface_py$Dynisma_AC_UDP_interface.coverage" NAME="Dynisma AC UDP interface Coverage Results" MODIFIED="1766062105237" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Dynisma_AC_UDP_interface_py$Dynisma_AC_UDP_interface.coverage" NAME="Dynisma AC UDP interface Coverage Results" MODIFIED="1792164396872" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Dynisma_AC_UDP_interface_py$receive.coverage" NAME="receive Coverage Results" MODIFIED="1750690334292" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/ACSharedMemoryUDP$receive.coverage" NAME="receive Coverage Results" MODIFIED="1741878115268" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/ACSharedMemoryUDP$Dynisma_AC_UDP_interface.coverage" NAME="Dynisma AC UDP interface Coverage Results" MODIFIED="1742552293328" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/ACSharedMemoryUDP$main.coverage" NAME="main Coverage Results" MODIFIED="1741883230157" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/ACSharedMemoryUDP$Dynisma_AC_UDP_send.coverage" NAME="Dynisma AC UDP send Coverage Results" MODIFIED="1741945385710" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Dynisma_AC_UDP_interface_py$Dynisma_AC_UDP_interface_DMG_1.coverage" NAME="Dynisma AC UDP interface DMG-1 Coverage Results" MODIFIED="1791973042765" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/ACSharedMemoryUDP$status_light.coverage" NAME="status light Coverage Results" MODIFIED="1741274764813" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Dynisma_AC_UDP_interface_py$ipc_emulator.coverage" NAME="ipc_emulator Coverage Results" MODIFIED="1792158289701" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Dynisma_AC_UDP_interface_py$Dynisma_AC_UDP_interface_DMG_S.coverage" NAME="Dynisma AC UDP interface DMG-S Coverage Results" MODIFIED="1783956046720" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Dynisma_AC_UDP_interface_py$receive_platform.coverage" NAME="receive_platform Coverage Results" MODIFIED="1766399947458" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Dynisma_AC_UDP_interface_py$status_light.coverage" NAME="status light Coverage Results" MODIFIED="1758273960406" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Dynisma_AC_UDP_interface_py$Dynisma_AC_UDP_interface_REDUCED.coverage" NAME="Dynisma AC UDP interface REDUCED Coverage Results" MODIFIED="1766402337697" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/ACSharedMemoryUDP$Dynisma_AC_UDP_interface.coverage" NAME="Dynisma AC UDP interface Coverage Results" MODIFIED="1742552293328" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

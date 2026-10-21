@@ -1,0 +1,98 @@
+{
+  "description": "DMG-1 TwinCAT interface",
+  "transmit": {
+    "byte_order": ">",
+    "fields": [
+      {"name": "BHeartbeat",          "type": "BOOL",  "value": "heartbeat"},
+      {"name": "NSimRequest",         "type": "USINT", "value": "nSimRequest"},
+      {"name": "NCueingMode",         "type": "SINT",  "value": 0},
+      {"name": "BEnableBrakeBooster", "type": "BOOL",  "value": "physics_data.brake > 0.1"},
+
+      {"name": "rLongWashout",  "type": "REAL", "value": "washoutSettings['rWashoutLong']"},
+      {"name": "rLatWashout",   "type": "REAL", "value": "washoutSettings['rWashoutLat']"},
+      {"name": "rVertWashout",  "type": "REAL", "value": "washoutSettings['rWashoutVert']"},
+      {"name": "rRollWashout",  "type": "REAL", "value": "washoutSettings['rWashoutRoll']"},
+      {"name": "rPitchWashout", "type": "REAL", "value": "washoutSettings['rWashoutPitch']"},
+      {"name": "rYawWashout",   "type": "REAL", "value": "washoutSettings['rWashoutYaw']"},
+
+      {"name": "fLongWashout",  "type": "REAL", "value": "washoutSettings['fWashoutLong']"},
+      {"name": "fLatWashout",   "type": "REAL", "value": "washoutSettings['fWashoutLat']"},
+      {"name": "fVertWashout",  "type": "REAL", "value": "washoutSettings['fWashoutVert']"},
+      {"name": "fRollWashout",  "type": "REAL", "value": "washoutSettings['fWashoutRoll']"},
+      {"name": "fPitchWashout", "type": "REAL", "value": "washoutSettings['fWashoutPitch']"},
+      {"name": "fYawWashout",   "type": "REAL", "value": "washoutSettings['fWashoutYaw']"},
+
+      {"name": "zLongWashout",  "type": "REAL", "value": "washoutSettings['zetaWashoutLong']"},
+      {"name": "zLatWashout",   "type": "REAL", "value": "washoutSettings['zetaWashoutLat']"},
+      {"name": "zVertWashout",  "type": "REAL", "value": "washoutSettings['zetaWashoutVert']"},
+      {"name": "zRollWashout",  "type": "REAL", "value": "washoutSettings['zetaWashoutRoll']"},
+      {"name": "zPitchWashout", "type": "REAL", "value": "washoutSettings['zetaWashoutPitch']"},
+      {"name": "zYawWashout",   "type": "REAL", "value": "washoutSettings['zetaWashoutYaw']"},
+
+      {"name": "sLongPreposMin",    "type": "REAL", "value": 0.0},
+      {"name": "sLongPreposMax",    "type": "REAL", "value": 0.0},
+      {"name": "vCarLongPreposMin", "type": "REAL", "value": 30.0},
+      {"name": "vCarLongPreposMax", "type": "REAL", "value": 85.0},
+
+      {"name": "rSideSlipCue",  "type": "REAL", "value": 0.0},
+      {"name": "rEngineCue",    "type": "REAL", "value": "physics_data.gas * 0.3 + 0.7"},
+      {"name": "rUpshiftCue",   "type": "REAL", "value": 0.0},
+      {"name": "rDownshiftCue", "type": "REAL", "value": 0.0, "comment": "This is a vector in GT DiL settings: [2, 2, 2, 1, 1, 1]"},
+
+      {"name": "gLongDemand",   "type": "REAL", "value": "g_long * 9.81"},
+      {"name": "gLatDemand",    "type": "REAL", "value": "g_lat * 9.81"},
+      {"name": "gVertDemand",   "type": "REAL", "value": "g_vert * 9.81"},
+      {"name": "dnRollDemand",  "type": "REAL", "value": "acc_roll"},
+      {"name": "dnPitchDemand", "type": "REAL", "value": "acc_pitch"},
+      {"name": "dnYawDemand",   "type": "REAL", "value": "acc_yaw"},
+
+      {"name": "gLongExternalCueing",   "type": "REAL", "value": 0.0},
+      {"name": "gLatExternalCueing",    "type": "REAL", "value": 0.0},
+      {"name": "gVertExternalCueing",   "type": "REAL", "value": 0.0},
+      {"name": "dnRollExternalCueing",  "type": "REAL", "value": 0.0},
+      {"name": "dnPitchExternalCueing", "type": "REAL", "value": 0.0},
+      {"name": "dnYawExternalCueing",   "type": "REAL", "value": 0.0},
+
+      {"name": "vLongExternalCueing",   "type": "REAL", "value": 0.0},
+      {"name": "vLatExternalCueing",    "type": "REAL", "value": 0.0},
+      {"name": "vVertExternalCueing",   "type": "REAL", "value": 0.0},
+      {"name": "nRollExternalCueing",   "type": "REAL", "value": "physics_data.local_angular_vel[2] * 0"},
+      {"name": "nPitchExternalCueing",  "type": "REAL", "value": "physics_data.local_angular_vel[0] * 0"},
+      {"name": "nYawExternalCueing",    "type": "REAL", "value": "physics_data.local_angular_vel[1] * 0"},
+
+      {"name": "xLongExternalCueing",   "type": "REAL", "value": 0.0},
+      {"name": "xLatExternalCueing",    "type": "REAL", "value": 0.0},
+      {"name": "xVertExternalCueing",   "type": "REAL", "value": 0.0},
+      {"name": "aRollExternalCueing",   "type": "REAL", "value": "physics_data.roll * -1 * 0.3"},
+      {"name": "aPitchExternalCueing",  "type": "REAL", "value": "physics_data.pitch * -1 * 0.3"},
+      {"name": "aYawExternalCueing",    "type": "REAL", "value": "physics_data.heading * -1 * 0"},
+
+      {"name": "vCar",          "type": "REAL", "value": "physics_data.speed_kmh / 3.6"},
+      {"name": "MSteer",        "type": "REAL", "value": 0.0},
+      {"name": "NMSteer",       "type": "INT",  "value": "physics_data.final_ff * modelConstants['TorqueMultiplier']"},
+      {"name": "nEngine",       "type": "REAL", "value": "physics_data.rpms * 0.75 * (2 * 3.142 / 60)"},
+      {"name": "nGear",         "type": "REAL", "value": "physics_data.gear - 1"},
+      {"name": "aSlipCar",      "type": "REAL", "value": 0.0},
+      {"name": "dnSlipCar",     "type": "REAL", "value": 0.0},
+      {"name": "nSlipCar",      "type": "REAL", "value": 0.0},
+
+      {"name": "NTimeStampms",  "type": "REAL", "value": "time_ms"}
+    ]
+  },
+  "receive": {
+    "byte_order": "<",
+    "fields": [
+      {"name": "NAMotorSteer", "type": "DINT"}, {"name": "NNMotorSteer", "type": "DINT"},
+      {"name": "gLongChassis", "type": "REAL"}, {"name": "gLatChassis", "type": "REAL"}, {"name": "gVertChassis", "type": "REAL"},
+      {"name": "dnRollChassis", "type": "REAL"}, {"name": "dnPitchChassis", "type": "REAL"}, {"name": "dnYawChassis", "type": "REAL"},
+      {"name": "xLongWorld", "type": "REAL"}, {"name": "xLatWorld", "type": "REAL"}, {"name": "xVertWorld", "type": "REAL"},
+      {"name": "aRollWorld", "type": "REAL"}, {"name": "aPitchWorld", "type": "REAL"}, {"name": "aYawWorld", "type": "REAL"},
+      {"name": "vLongWorld", "type": "REAL"}, {"name": "vLatWorld", "type": "REAL"}, {"name": "vVertWorld", "type": "REAL"},
+      {"name": "nRollWorld", "type": "REAL"}, {"name": "nPitchWorld", "type": "REAL"}, {"name": "nYawWorld", "type": "REAL"},
+      {"name": "xLongDemandWorld", "type": "REAL"}, {"name": "xLatDemandWorld", "type": "REAL"}, {"name": "xVertDemandWorld", "type": "REAL"},
+      {"name": "aRollDemandWorld", "type": "REAL"}, {"name": "aPitchDemandWorld", "type": "REAL"}, {"name": "aYawDemandWorld", "type": "REAL"},
+      {"name": "vLongDemandWorld", "type": "REAL"}, {"name": "vLatDemandWorld", "type": "REAL"}, {"name": "vVertDemandWorld", "type": "REAL"},
+      {"name": "nRollDemandWorld", "type": "REAL"}, {"name": "nPitchDemandWorld", "type": "REAL"}, {"name": "nYawDemandWorld", "type": "REAL"}
+    ]
+  }
+}

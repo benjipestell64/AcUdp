@@ -1,13 +1,16 @@
+[Packet]
+spec_file = packets/DMG-1.json
+
 [Network]
-UDP_IP = 169.254.150.134
+UDP_IP = 192.168.4.10
 UDP_PORT = 10000
-TRANSMIT_TO_SELF = True
+TRANSMIT_TO_SELF = False
 
 [Debug]
 debug_output = False
 
 [Logging]
-write_tx_to_csv = True
+write_tx_to_csv = False
 write_rx_to_csv = False
 log_execution_time = False
 tx_csv_file = telemetry_log.csv
@@ -16,21 +19,22 @@ rx_csv_file = controller_log.csv
 [Processing]
 read_graphics_telemetry = False
 launch_wait_time = 10
+game_window_titles = Assetto Corsa, Assetto Corsa Rally
 
 [ModelConstants]
 MotionConsent = 1
-NSimRequest = 0
+NSimRequest = 6
 SteeringTorqueEnableRequest = 1
 TorqueMultiplier = 0.0
 
 [WashoutSettings]
-rWashoutLong = 0.5
+rWashoutLong = 0.3
 rWashoutLat = 0.6
 rWashoutVert = 0.3
 rWashoutRoll = 0.2
 rWashoutPitch = 0.2
 rWashoutYaw = 0.5
-fWashoutLong = 0.8
+fWashoutLong = 2.5
 fWashoutLat = 2
 fWashoutVert = 2
 fWashoutRoll = 1.5

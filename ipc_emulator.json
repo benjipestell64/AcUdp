@@ -1,0 +1,25 @@
+{
+  "packet_spec": "packets/DMG-1.json",
+  "bind_ip": "192.168.0.1",
+  "rx_port": 10000,
+  "tx_ip": "192.168.0.2",
+  "tx_port": 10010,
+  "tx_rate_hz": 1000,
+  "tx_values": {},
+  "console": {
+    "enabled": true,
+    "level": "INFO"
+  },
+  "logging": {
+    "file": "logs/ipc_emulator.log",
+    "level": "DEBUG"
+  },
+  "gui": {
+    "width": 900,
+    "height": 900,
+    "fast_update_hz": 30,
+    "slow_update_hz": 4,
+    "plot_seconds": 10,
+    "spacing": 8
+  }
+}
