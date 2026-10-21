@@ -125,10 +125,16 @@ def set_rx_activity_light(active=False):
     rx_activity_light.config(text="Activity: " + state)
 
 
-def pulse_rx_activity_light(duration=0.1):
-    """Turn on RX activity light for a short duration."""
-    set_rx_activity_light(True)
-    threading.Timer(duration, lambda: set_rx_activity_light(False)).start()
+# Written by the receive thread, read by update_rx_ui on the Tk thread. Keeping Tk calls out of the receive thread
+# matters: each one waits on the GUI, which made the receive loop fall behind and queue seconds of packets
+rx_last_packet_time = None  # perf_counter time of the last valid packet
+
+
+def update_rx_ui(interval_ms=50, light_hold_s=0.1):
+    """Refresh the receive activity light from the Tk thread, at a fixed rate."""
+    active = rx_last_packet_time is not None and time.perf_counter() - rx_last_packet_time < light_hold_s
+    set_rx_activity_light(active)
+    root.after(interval_ms, update_rx_ui)
 
 
 def set_rx_socket_bound_light(active=False):
@@ -336,7 +342,6 @@ def receive_loop():
     Runs independently of the game and of Start/Stop, and forwards each packet (e.g. to OpenTrack) as soon as it
     arrives, so the forwarded pose follows the platform's clock rather than the game's.
     """
-    start_time_ms = get_current_time_in_milliseconds()
     # Separate socket for forwarding: on Windows, an ICMP "port unreachable" from a send (OpenTrack not running)
     # would otherwise make the next recvfrom on the receive socket fail
     forward_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) if FORWARD_SPEC else None
@@ -374,15 +379,31 @@ def receive_loop():
         if silence_reported:
             print(f"Packets arriving on port {UDP_RECEIVE_PORT} again.")
             silence_reported = False
-        if len(data) != RX_SPEC.size:
-            # Always report each new size once: a size mismatch usually means the wrong spec_file
-            if len(data) not in reported_sizes:
-                print(f"Ignoring {len(data)} byte packet(s) from {addr[0]}:{addr[1]}, expected {RX_SPEC.size} "
-                      f"bytes for {PACKET_SPEC_FILE}. Is spec_file in config.txt right for this platform?")
-                reported_sizes.add(len(data))
+
+        # Drain anything already queued and keep only the newest valid packet, so that if this loop is ever
+        # briefly slower than the platform, the pose sent on stays current instead of building up a backlog
+        packets = [(data, addr)]
+        sock.setblocking(False)
+        try:
+            while True:
+                packets.append(sock.recvfrom(65535))
+        except OSError:  # BlockingIOError once the queue is empty
+            pass
+        finally:
+            sock.settimeout(5)
+
+        data = None
+        for packet, packet_addr in packets:
+            if len(packet) == RX_SPEC.size:
+                data = packet
+            elif len(packet) not in reported_sizes:
+                # Always report each new size once: a size mismatch usually means the wrong spec_file
+                print(f"Ignoring {len(packet)} byte packet(s) from {packet_addr[0]}:{packet_addr[1]}, expected "
+                      f"{RX_SPEC.size} bytes for {PACKET_SPEC_FILE}. Is spec_file in config.txt right for this platform?")
+                reported_sizes.add(len(packet))
+        if data is None:
             continue
         current_time_ms = get_current_time_in_milliseconds()
-        timestamp = current_time_ms - start_time_ms
 
         received_data = RX_SPEC.unpack(data)
 
@@ -396,13 +417,13 @@ def receive_loop():
                     print(f"OpenTrack forward failed: {e}")
                     forward_error_reported = True
 
-        pulse_rx_activity_light()
+        global rx_last_packet_time
+        rx_last_packet_time = time.perf_counter()
 
         # received_tot = received_data.TransmitTimeTenMs / 10.0  # undo the 10x factor in the transmit loop
         # round_trip_time = current_time_ms - received_tot
         round_trip_time = "None"
 
-        rx_timestamp_label.config(text=f"Timestamp: {timestamp / 1000}s")
         if csv_rx_logger:
             csv_rx_logger.log(received_data, [current_time_ms, round_trip_time])
 
@@ -619,9 +640,6 @@ rx_activity_light = ttk.Label(frame, text="")
 rx_activity_light.grid(row=2, column=4, columnspan=1, padx=5, pady=5, sticky="w")
 set_rx_activity_light()
 
-rx_timestamp_label = ttk.Label(frame, text="Timestamp: 0000.00")
-rx_timestamp_label.grid(row=2, column=5, columnspan=1, padx=5, pady=5, sticky="w")
-
 rx_socket_bound_light = ttk.Label(frame, text="")
 rx_socket_bound_light.grid(row=3, column=4, columnspan=2, padx=5, pady=5, sticky="w")
 set_rx_socket_bound_light()
@@ -670,5 +688,6 @@ target_button.grid(row=10, column=4, columnspan=2, padx=5, pady=5)
 
 # Receive (and forward to OpenTrack) for the whole lifetime of the app, independent of the game and Start/Stop
 threading.Thread(target=receive_loop, daemon=True).start()
+update_rx_ui()
 start()
 root.mainloop()
