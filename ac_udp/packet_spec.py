@@ -85,3 +85,17 @@ def load_packet_spec(path):
     return (spec.get("description", os.path.basename(path)),
             PacketSpec("TelemetryData", spec["transmit"], path),
             PacketSpec("ControllerData", spec["receive"], path))
+
+
+def load_forward_spec(path):
+    """
+    Load the optional "forward" section of a packet spec file, or None if it has none.
+
+    Its field values are evaluated against the received packet's fields, and the result is sent on (e.g. to
+    OpenTrack) every time a packet is received.
+    """
+    with open(path, encoding="utf-8") as f:
+        spec = json.load(f)
+    if "forward" not in spec:
+        return None
+    return PacketSpec("ForwardData", spec["forward"], path)

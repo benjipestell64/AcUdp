@@ -72,19 +72,23 @@
     ]
   },
   "receive": {
-    "byte_order": "<",
+    "byte_order": ">",
+    "comment": "Platform pose in SI units: metres and radians",
     "fields": [
-      {"name": "NAMotorSteer", "type": "DINT"}, {"name": "NNMotorSteer", "type": "DINT"},
-      {"name": "gLongChassis", "type": "REAL"}, {"name": "gLatChassis", "type": "REAL"}, {"name": "gVertChassis", "type": "REAL"},
-      {"name": "dnRollChassis", "type": "REAL"}, {"name": "dnPitchChassis", "type": "REAL"}, {"name": "dnYawChassis", "type": "REAL"},
       {"name": "xLongWorld", "type": "REAL"}, {"name": "xLatWorld", "type": "REAL"}, {"name": "xVertWorld", "type": "REAL"},
-      {"name": "aRollWorld", "type": "REAL"}, {"name": "aPitchWorld", "type": "REAL"}, {"name": "aYawWorld", "type": "REAL"},
-      {"name": "vLongWorld", "type": "REAL"}, {"name": "vLatWorld", "type": "REAL"}, {"name": "vVertWorld", "type": "REAL"},
-      {"name": "nRollWorld", "type": "REAL"}, {"name": "nPitchWorld", "type": "REAL"}, {"name": "nYawWorld", "type": "REAL"},
-      {"name": "xLongDemandWorld", "type": "REAL"}, {"name": "xLatDemandWorld", "type": "REAL"}, {"name": "xVertDemandWorld", "type": "REAL"},
-      {"name": "aRollDemandWorld", "type": "REAL"}, {"name": "aPitchDemandWorld", "type": "REAL"}, {"name": "aYawDemandWorld", "type": "REAL"},
-      {"name": "vLongDemandWorld", "type": "REAL"}, {"name": "vLatDemandWorld", "type": "REAL"}, {"name": "vVertDemandWorld", "type": "REAL"},
-      {"name": "nRollDemandWorld", "type": "REAL"}, {"name": "nPitchDemandWorld", "type": "REAL"}, {"name": "nYawDemandWorld", "type": "REAL"}
+      {"name": "aRollWorld", "type": "REAL"}, {"name": "aPitchWorld", "type": "REAL"}, {"name": "aYawWorld", "type": "REAL"}
+    ]
+  },
+  "forward": {
+    "byte_order": "<",
+    "comment": "OpenTrack 'UDP over network' input: 6 doubles, x/y/z in cm then yaw/pitch/roll in degrees. Invert axes in OpenTrack if needed",
+    "fields": [
+      {"name": "x",     "type": "LREAL", "value": "xLatWorld * 100"},
+      {"name": "y",     "type": "LREAL", "value": "xVertWorld * 100"},
+      {"name": "z",     "type": "LREAL", "value": "xLongWorld * 100"},
+      {"name": "yaw",   "type": "LREAL", "value": "math.degrees(aYawWorld)"},
+      {"name": "pitch", "type": "LREAL", "value": "math.degrees(aPitchWorld)"},
+      {"name": "roll",  "type": "LREAL", "value": "math.degrees(aRollWorld)"}
     ]
   }
 }

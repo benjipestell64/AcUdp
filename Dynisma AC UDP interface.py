@@ -8,7 +8,7 @@ from tkinter import ttk
 import threading
 
 from ac_udp.settings import CONFIG_FILE, DEFAULT_SETTINGS, load_config
-from ac_udp.packet_spec import load_packet_spec
+from ac_udp.packet_spec import load_forward_spec, load_packet_spec
 from ac_udp.csv_logger import CSVLogger
 from ac_udp.ac_shared_memory import (AC_PHYSICS_MEMORY_NAME, PHYSICS_DATA_SIZE, PhysicsData, get_physics_headers,
                                      find_similar_windows, is_ac_running, open_shared_memory, physics_to_row,
@@ -38,6 +38,11 @@ UDP_IP = config.get('Network', 'UDP_IP')
 UDP_RECEIVE_IP = "0.0.0.0"
 UDP_PORT = config.getint('Network', 'UDP_PORT')
 TRANSMIT_TO_SELF = config.getboolean('Network', 'TRANSMIT_TO_SELF')
+
+# Read OpenTrack forwarding settings (received platform pose -> OpenTrack "UDP over network" input)
+OPENTRACK_ENABLED = config.getboolean('OpenTrack', 'enabled', fallback=DEFAULT_SETTINGS['OpenTrack']['enabled'] == 'True')
+OPENTRACK_IP = config.get('OpenTrack', 'ip', fallback=DEFAULT_SETTINGS['OpenTrack']['ip'])
+OPENTRACK_PORT = config.getint('OpenTrack', 'port', fallback=int(DEFAULT_SETTINGS['OpenTrack']['port']))
 
 # Read debug settings
 debug_output = config.getboolean('Debug', 'debug_output')
@@ -86,6 +91,7 @@ if TRANSMIT_TO_SELF:
 
 try:
     PACKET_DESCRIPTION, TX_SPEC, RX_SPEC = load_packet_spec(PACKET_SPEC_FILE)
+    FORWARD_SPEC = load_forward_spec(PACKET_SPEC_FILE) if OPENTRACK_ENABLED else None
 except Exception as e:
     from tkinter import messagebox
     messagebox.showerror("Packet spec error", f"Could not load packet spec '{PACKET_SPEC_FILE}':\n\n{e}")
@@ -322,9 +328,19 @@ def transmit_loop():
 
 # noinspection PyGlobalUndefined,PyTypeChecker
 def receive_loop():
-    """Thread to listen for incoming UDP packets."""
-    global running
+    """
+    Thread to listen for incoming UDP packets from the platform, for the lifetime of the app.
+
+    Runs independently of the game and of Start/Stop, and forwards each packet (e.g. to OpenTrack) as soon as it
+    arrives, so the forwarded pose follows the platform's clock rather than the game's.
+    """
     start_time_ms = get_current_time_in_milliseconds()
+    # Separate socket for forwarding: on Windows, an ICMP "port unreachable" from a send (OpenTrack not running)
+    # would otherwise make the next recvfrom on the receive socket fail
+    forward_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) if FORWARD_SPEC else None
+    forward_error_reported = False
+    if FORWARD_SPEC:
+        print(f"Forwarding received platform pose to OpenTrack at {OPENTRACK_IP}:{OPENTRACK_PORT}.")
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         sock.bind((UDP_RECEIVE_IP, UDP_PORT))
@@ -335,8 +351,13 @@ def receive_loop():
         socket_bound = False
         set_rx_socket_bound_light(False)
 
-    while running and socket_bound:
-        data, addr = sock.recvfrom(65535)  # Full buffer so oversized packets are rejected, not an error
+    while socket_bound:
+        try:
+            data, addr = sock.recvfrom(65535)  # Full buffer so oversized packets are rejected, not an error
+        except OSError as e:
+            if debug_output:
+                print(f"Receive error: {e}")
+            continue
         if len(data) != RX_SPEC.size:
             if debug_output:
                 print(f"Ignoring {len(data)} byte packet, expected {RX_SPEC.size} bytes")
@@ -345,6 +366,16 @@ def receive_loop():
         timestamp = current_time_ms - start_time_ms
 
         received_data = RX_SPEC.unpack(data)
+
+        if forward_sock:
+            try:
+                forward_packet = FORWARD_SPEC.build(received_data._asdict())
+                forward_sock.sendto(FORWARD_SPEC.pack(forward_packet), (OPENTRACK_IP, OPENTRACK_PORT))
+                forward_error_reported = False
+            except (OSError, ValueError) as e:
+                if not forward_error_reported:
+                    print(f"OpenTrack forward failed: {e}")
+                    forward_error_reported = True
 
         pulse_rx_activity_light()
 
@@ -404,16 +435,13 @@ def start():
     """
     Start the transmission of telemetry data.
 
-    This function sets the `running` flag to True and starts two threads:
-    one for transmitting telemetry data (`transmit_thread`) and one for
-    receiving incoming UDP packets (`receive_thread`).
+    This function sets the `running` flag to True and starts the thread that transmits telemetry data
+    (`transmit_thread`). The receive thread runs for the lifetime of the app and is started separately.
     """
     global running
     running = True
     transmit_thread = threading.Thread(target=transmit_loop, daemon=True)
     transmit_thread.start()
-    receive_thread = threading.Thread(target=receive_loop, daemon=True)
-    # receive_thread.start()
 
 
 # noinspection PyGlobalUndefined
@@ -621,5 +649,7 @@ centre_button.grid(row=10, column=2, columnspan=2, padx=5, pady=5)
 target_button = ttk.Button(frame, text="Target follow", width=15, command=request_target)
 target_button.grid(row=10, column=4, columnspan=2, padx=5, pady=5)
 
+# Receive (and forward to OpenTrack) for the whole lifetime of the app, independent of the game and Start/Stop
+threading.Thread(target=receive_loop, daemon=True).start()
 start()
 root.mainloop()

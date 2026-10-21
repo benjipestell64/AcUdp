@@ -12,6 +12,11 @@ DEFAULT_SETTINGS = {
         'UDP_PORT': '10000',
         'TRANSMIT_TO_SELF': 'False'
     },
+    'OpenTrack': {
+        'enabled': 'True',
+        'ip': '127.0.0.1',
+        'port': '4242'
+    },
     'Debug': {
         'debug_output': 'False'
     },
