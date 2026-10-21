@@ -5,6 +5,7 @@ spec_file = packets/DMG-1.json
 UDP_IP = 192.168.4.10
 UDP_PORT = 10000
 TRANSMIT_TO_SELF = False
+UDP_RECEIVE_PORT = 10030
 
 [OpenTrack]
 enabled = True

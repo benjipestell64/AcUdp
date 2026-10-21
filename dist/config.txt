@@ -2,6 +2,7 @@
 UDP_IP = 192.168.4.10
 UDP_PORT = 10000
 TRANSMIT_TO_SELF = False
+UDP_RECEIVE_PORT = 10000
 
 [OpenTrack]
 enabled = True

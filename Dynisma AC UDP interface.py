@@ -37,6 +37,8 @@ PACKET_SPEC_FILE = config.get('Packet', 'spec_file', fallback=DEFAULT_SETTINGS['
 UDP_IP = config.get('Network', 'UDP_IP')
 UDP_RECEIVE_IP = "0.0.0.0"
 UDP_PORT = config.getint('Network', 'UDP_PORT')
+# Port the platform sends its packets back to (defaults to the transmit port, as before)
+UDP_RECEIVE_PORT = config.getint('Network', 'UDP_RECEIVE_PORT', fallback=UDP_PORT)
 TRANSMIT_TO_SELF = config.getboolean('Network', 'TRANSMIT_TO_SELF')
 
 # Read OpenTrack forwarding settings (received platform pose -> OpenTrack "UDP over network" input)
@@ -343,24 +345,41 @@ def receive_loop():
         print(f"Forwarding received platform pose to OpenTrack at {OPENTRACK_IP}:{OPENTRACK_PORT}.")
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        sock.bind((UDP_RECEIVE_IP, UDP_PORT))
+        sock.bind((UDP_RECEIVE_IP, UDP_RECEIVE_PORT))
         socket_bound = True
         set_rx_socket_bound_light(True)
-    except OSError:
-        print(f"Error: Receive loop unable to bind to {UDP_RECEIVE_IP}:{UDP_PORT}.")
+        print(f"Listening on {UDP_RECEIVE_IP}:{UDP_RECEIVE_PORT} for {RX_SPEC.size} byte packets "
+              f"({PACKET_SPEC_FILE}).")
+    except OSError as e:
+        print(f"Error: Receive loop unable to bind to {UDP_RECEIVE_IP}:{UDP_RECEIVE_PORT} ({e}).")
         socket_bound = False
         set_rx_socket_bound_light(False)
 
+    sock.settimeout(5)
+    reported_sizes = set()
+    silence_reported = False
     while socket_bound:
         try:
             data, addr = sock.recvfrom(65535)  # Full buffer so oversized packets are rejected, not an error
+        except socket.timeout:
+            if not silence_reported:
+                print(f"No packets received on port {UDP_RECEIVE_PORT} for 5 s. Check the platform's destination "
+                      f"IP/port (set UDP_RECEIVE_PORT in [Network] if it differs) and Windows Firewall.")
+                silence_reported = True
+            continue
         except OSError as e:
             if debug_output:
                 print(f"Receive error: {e}")
             continue
+        if silence_reported:
+            print(f"Packets arriving on port {UDP_RECEIVE_PORT} again.")
+            silence_reported = False
         if len(data) != RX_SPEC.size:
-            if debug_output:
-                print(f"Ignoring {len(data)} byte packet, expected {RX_SPEC.size} bytes")
+            # Always report each new size once: a size mismatch usually means the wrong spec_file
+            if len(data) not in reported_sizes:
+                print(f"Ignoring {len(data)} byte packet(s) from {addr[0]}:{addr[1]}, expected {RX_SPEC.size} "
+                      f"bytes for {PACKET_SPEC_FILE}. Is spec_file in config.txt right for this platform?")
+                reported_sizes.add(len(data))
             continue
         current_time_ms = get_current_time_in_milliseconds()
         timestamp = current_time_ms - start_time_ms
@@ -593,7 +612,7 @@ tx_logging_label = ttk.Label(frame, text="Log: " + tx_csv_file if write_tx_to_cs
 tx_logging_label.grid(row=4, column=0, columnspan=3, padx=5, pady=5, sticky="w")
 
 # Receive
-transmit_label = ttk.Label(frame, text="Receive", background="grey80")
+transmit_label = ttk.Label(frame, text=f"Receive  Port: {UDP_RECEIVE_PORT}", background="grey80")
 transmit_label.grid(row=1, column=4, columnspan=4, pady=5)
 
 rx_activity_light = ttk.Label(frame, text="")
